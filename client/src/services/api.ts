@@ -397,4 +397,16 @@ export const api = {
       return handleResponse<{ message: string }>(res);
     },
   },
+
+  // Image Upload API
+  upload: {
+    uploadImage: async (imageDataUrl: string) => {
+      const res = await fetch(`${API_BASE}/upload/image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ image: imageDataUrl }),
+      });
+      return handleResponse<{ url: string; message: string }>(res);
+    },
+  },
 };

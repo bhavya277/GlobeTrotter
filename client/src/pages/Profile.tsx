@@ -157,14 +157,28 @@ export const Profile: React.FC = () => {
               <input
                 id="profile-file-input"
                 type="file"
-                accept="image/*"
-                onChange={(e) => {
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) {
+                    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                    if (!validTypes.includes(file.type.toLowerCase())) {
+                      setError('Only JPG, JPEG, PNG, and WebP images are allowed.');
+                      return;
+                    }
+                    if (file.size > 5 * 1024 * 1024) {
+                      setError('Profile image size must be less than 5MB.');
+                      return;
+                    }
                     const reader = new FileReader();
-                    reader.onloadend = () => {
+                    reader.onloadend = async () => {
                       if (reader.result) {
-                        setProfilePhoto(reader.result as string);
+                        try {
+                          const res = await api.upload.uploadImage(reader.result as string);
+                          setProfilePhoto(res.url);
+                        } catch (err: any) {
+                          setError(err.message || 'Failed to upload profile photo');
+                        }
                       }
                     };
                     reader.readAsDataURL(file);

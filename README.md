@@ -95,7 +95,7 @@
    ```env
    PORT=5000
    DATABASE_URL="file:./dev.db"
-   JWT_SECRET="globetrotter_production_jwt_secret_key_2026"
+   JWT_SECRET="your_secure_jwt_secret_here_min_32_chars"
    ```
 
 ---

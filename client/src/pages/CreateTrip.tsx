@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { City } from '../types';
+import { ImageUploader } from '../components/ImageUploader';
 import {
   Compass,
   Calendar,
@@ -340,28 +341,12 @@ export const CreateTrip: React.FC = () => {
             <p className="text-xs text-slate-400">Review your trip details and choose a cover photo background.</p>
           </div>
 
-          {/* Live Cover Preview Card */}
-          <div className="h-44 rounded-2xl overflow-hidden relative border border-white/10">
-            <img src={coverPhoto} alt="Cover Preview" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-transparent to-transparent"></div>
-            <div className="absolute bottom-4 left-4 right-4">
-              <h3 className="text-xl font-black text-white">{name}</h3>
-              <p className="text-xs text-slate-300">
-                📅 {startDate} to {endDate} • Budget: ₹{totalBudget.toLocaleString()} INR (₹)
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Cover Image URL</label>
-            <input
-              type="url"
-              value={coverPhoto}
-              onChange={(e) => setCoverPhoto(e.target.value)}
-              placeholder="https://images.unsplash.com/..."
-              className="w-full px-4 py-3 rounded-xl glass-input text-xs text-white"
-            />
-          </div>
+          {/* Secure Image Uploader */}
+          <ImageUploader
+            value={coverPhoto}
+            onChange={(url) => setCoverPhoto(url || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=80')}
+            label="Trip Cover Photo"
+          />
 
           <div className="flex items-center justify-between pt-4">
             <button
