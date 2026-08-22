@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Trip, TripStop, TripActivity } from '../types';
+import { RouteVisualization } from '../components/RouteVisualization';
+import { formatCurrency } from '../utils/formatters';
 import {
   Calendar as CalendarIcon,
   ListFilter,
@@ -117,8 +119,13 @@ export const ItineraryView: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-black text-white">{trip.name} — Itinerary Overview</h1>
           <p className="text-xs text-slate-400">
             📅 {new Date(trip.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} to{' '}
-            {new Date(trip.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} • Total Budget: ₹{trip.totalBudget?.toLocaleString()} INR (₹)
+            {new Date(trip.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} • Total Budget: {formatCurrency(trip.totalBudget || 0, trip.currency)}
           </p>
+          {trip.stops && trip.stops.length > 0 && (
+            <div className="pt-1">
+              <RouteVisualization stops={trip.stops} variant="compact" />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center space-x-3">

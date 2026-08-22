@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Trip, City } from '../types';
+import { RouteVisualization } from '../components/RouteVisualization';
+import { formatCurrency } from '../utils/formatters';
 import {
   Compass,
   PlusCircle,
@@ -64,15 +66,15 @@ export const Dashboard: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                Explorer Command Center
+                Travel Workspace
               </span>
               <span className="text-xs text-slate-400 font-semibold">
-                Welcome back, {user?.name || 'Explorer'} 👋
+                Good morning, {user?.name || 'Traveler'} 👋
               </span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Where are we going <span className="gradient-text">next?</span>
+              Where are you going <span className="gradient-text">next?</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
               You have <span className="font-bold text-sky-400">{trips.length} active itineraries</span> across{' '}
@@ -86,7 +88,7 @@ export const Dashboard: React.FC = () => {
               className="flex items-center space-x-2 px-5 py-3 rounded-2xl font-extrabold text-xs text-white bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-lg shadow-sky-500/20 transition-all hover:scale-[1.02]"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Plan New Expedition</span>
+              <span>+ Plan a Trip</span>
             </Link>
 
             <Link

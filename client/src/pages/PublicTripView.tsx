@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Trip } from '../types';
+import { RouteVisualization } from '../components/RouteVisualization';
+import { formatCurrency } from '../utils/formatters';
 import {
   Share2,
   Copy,
@@ -100,8 +102,13 @@ export const PublicTripView: React.FC = () => {
             </div>
             <h1 className="text-3xl font-black text-white">{trip.name}</h1>
             <p className="text-xs text-slate-400">
-              📅 {new Date(trip.startDate).toLocaleDateString()} to {new Date(trip.endDate).toLocaleDateString()} • {trip.stops?.length || 0} Cities • Total Budget: ₹{trip.totalBudget?.toLocaleString()} INR (₹)
+              📅 {new Date(trip.startDate).toLocaleDateString()} to {new Date(trip.endDate).toLocaleDateString()} • {trip.stops?.length || 0} Cities • Total Budget: {formatCurrency(trip.totalBudget || 0, trip.currency)}
             </p>
+            {trip.stops && trip.stops.length > 0 && (
+              <div className="pt-2">
+                <RouteVisualization stops={trip.stops} variant="expanded" />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 shrink-0">

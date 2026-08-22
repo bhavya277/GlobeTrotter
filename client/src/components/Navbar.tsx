@@ -225,6 +225,14 @@ export const Navbar: React.FC = () => {
                 <span>Explore Cities</span>
               </Link>
               <Link
+                to="/activities"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-white/5"
+              >
+                <Compass className="w-4 h-4 text-amber-400" />
+                <span>Explore Activities</span>
+              </Link>
+              <Link
                 to="/my-trips"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-white/5"
@@ -238,7 +246,7 @@ export const Navbar: React.FC = () => {
                 className="flex items-center space-x-3 px-3 py-2.5 rounded-xl bg-sky-500 text-white font-extrabold text-xs shadow-md shadow-sky-500/20"
               >
                 <PlusCircle className="w-4 h-4" />
-                <span>Plan New Trip</span>
+                <span>+ Plan a Trip</span>
               </Link>
               <Link
                 to="/profile"
@@ -264,19 +272,44 @@ export const Navbar: React.FC = () => {
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-center px-4 py-2.5 rounded-xl text-xs font-bold text-slate-200 bg-slate-800"
+                className="block text-center py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-white/5"
               >
                 Log In
               </Link>
               <Link
                 to="/signup"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-center px-4 py-2.5 rounded-xl text-xs font-extrabold bg-sky-500 text-white shadow-md shadow-sky-500/20"
+                className="block text-center py-2.5 rounded-xl text-xs font-extrabold text-white bg-sky-500 shadow-md shadow-sky-500/20"
               >
-                Sign Up
+                Get Started Free
               </Link>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Mobile Bottom Navigation Bar (Phase 21) */}
+      {user && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 border-t border-slate-800 backdrop-blur-xl flex items-center justify-around py-2 px-3">
+          <Link to="/dashboard" aria-label="Dashboard" className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/dashboard') ? 'text-sky-400' : 'text-slate-400'}`}>
+            <Compass className="w-5 h-5" />
+            <span>Home</span>
+          </Link>
+          <Link to="/my-trips" aria-label="My Trips" className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/my-trips') ? 'text-sky-400' : 'text-slate-400'}`}>
+            <Calendar className="w-5 h-5" />
+            <span>Trips</span>
+          </Link>
+          <Link to="/create-trip" aria-label="Plan a Trip" className="flex flex-col items-center justify-center w-11 h-11 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/30 -mt-5 border-2 border-slate-950 hover:scale-105 transition-transform">
+            <PlusCircle className="w-6 h-6" />
+          </Link>
+          <Link to="/cities" aria-label="Explore Destinations" className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/cities') ? 'text-sky-400' : 'text-slate-400'}`}>
+            <MapPin className="w-5 h-5" />
+            <span>Explore</span>
+          </Link>
+          <Link to="/profile" aria-label="Profile Settings" className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/profile') ? 'text-sky-400' : 'text-slate-400'}`}>
+            <UserIcon className="w-5 h-5" />
+            <span>Profile</span>
+          </Link>
         </div>
       )}
     </header>
