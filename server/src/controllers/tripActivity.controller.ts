@@ -27,6 +27,7 @@ const updateTripActivitySchema = z.object({
 });
 
 const reorderActivitiesSchema = z.object({
+  tripStopId: z.string().optional(),
   orderedActivityIds: z.array(z.string()).min(1, 'Ordered activity IDs required'),
 });
 
@@ -75,6 +76,18 @@ export const addTripActivity = async (req: Request, res: Response) => {
       return res.status(400).json({
         error: `Activity Date Mismatch: Scheduled date (${scheduledDateObj.toLocaleDateString()}) must be within the stop's dates (${stopStart.toLocaleDateString()} - ${stopEnd.toLocaleDateString()}).`,
       });
+    }
+
+    // P1 Fix 15: Activity Time Validation
+    const startTime = validated.startTime || '10:00';
+    const endTime = validated.endTime || '12:00';
+
+    const [sH, sM] = startTime.split(':').map(Number);
+    const [eH, eM] = endTime.split(':').map(Number);
+    if (!isNaN(sH) && !isNaN(sM) && !isNaN(eH) && !isNaN(eM)) {
+      if (sH * 60 + sM >= eH * 60 + eM) {
+        return res.status(400).json({ error: 'Activity start time must be earlier than end time.' });
+      }
     }
 
     const existingCount = await prisma.tripActivity.count({
@@ -140,6 +153,19 @@ export const updateTripActivity = async (req: Request, res: Response) => {
       }
     }
 
+    const startTime = validated.startTime !== undefined ? validated.startTime : existing.startTime;
+    const endTime = validated.endTime !== undefined ? validated.endTime : existing.endTime;
+
+    if (startTime && endTime) {
+      const [sH, sM] = startTime.split(':').map(Number);
+      const [eH, eM] = endTime.split(':').map(Number);
+      if (!isNaN(sH) && !isNaN(sM) && !isNaN(eH) && !isNaN(eM)) {
+        if (sH * 60 + sM >= eH * 60 + eM) {
+          return res.status(400).json({ error: 'Activity start time must be earlier than end time.' });
+        }
+      }
+    }
+
     const updated = await prisma.tripActivity.update({
       where: { id },
       data: {
@@ -176,6 +202,38 @@ export const reorderTripActivities = async (req: Request, res: Response) => {
 
     const validated = reorderActivitiesSchema.parse(req.body);
 
+    // 1. Fetch ALL submitted activities from DB with tripStop and trip relationships
+    const existingActivities = await prisma.tripActivity.findMany({
+      where: { id: { in: validated.orderedActivityIds } },
+      include: {
+        tripStop: {
+          include: { trip: true },
+        },
+      },
+    });
+
+    // 2. Verify EVERY activity exists
+    if (existingActivities.length !== validated.orderedActivityIds.length) {
+      return res.status(404).json({ error: 'One or more submitted activity IDs do not exist.' });
+    }
+
+    // 3. Verify EVERY activity belongs to the authenticated user's trip
+    const firstTripId = existingActivities[0].tripStop.tripId;
+    const firstStopId = existingActivities[0].tripStopId;
+
+    for (const act of existingActivities) {
+      if (act.tripStop.trip.userId !== req.user.userId) {
+        return res.status(403).json({ error: 'Forbidden. Activity belongs to another user\'s trip.' });
+      }
+      if (act.tripStop.tripId !== firstTripId) {
+        return res.status(400).json({ error: 'All reordered activities must belong to the same trip.' });
+      }
+      if (validated.tripStopId && act.tripStopId !== validated.tripStopId) {
+        return res.status(400).json({ error: 'All reordered activities must belong to the specified trip stop.' });
+      }
+    }
+
+    // 4. Update transactionally
     await prisma.$transaction(
       validated.orderedActivityIds.map((id, index) =>
         prisma.tripActivity.update({

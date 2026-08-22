@@ -224,6 +224,21 @@ export const reorderStops = async (req: Request, res: Response) => {
 
     const validated = reorderStopsSchema.parse(req.body);
 
+    // Fetch ALL submitted stops to verify they belong to THIS trip
+    const existingStops = await prisma.tripStop.findMany({
+      where: { id: { in: validated.orderedStopIds } },
+    });
+
+    if (existingStops.length !== validated.orderedStopIds.length) {
+      return res.status(404).json({ error: 'One or more submitted stop IDs do not exist.' });
+    }
+
+    for (const stop of existingStops) {
+      if (stop.tripId !== tripId) {
+        return res.status(400).json({ error: 'All reordered stops must belong to the specified trip.' });
+      }
+    }
+
     await prisma.$transaction(
       validated.orderedStopIds.map((id, index) =>
         prisma.tripStop.update({
@@ -258,6 +273,12 @@ export const deleteStop = async (req: Request, res: Response) => {
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
     if (trip.userId !== req.user.userId) {
       return res.status(403).json({ error: 'Forbidden. You do not own this trip.' });
+    }
+
+    const stop = await prisma.tripStop.findUnique({ where: { id: stopId } });
+    if (!stop) return res.status(404).json({ error: 'City stop not found' });
+    if (stop.tripId !== tripId) {
+      return res.status(400).json({ error: 'Forbidden. City stop does not belong to the requested trip.' });
     }
 
     await prisma.tripStop.delete({ where: { id: stopId } });

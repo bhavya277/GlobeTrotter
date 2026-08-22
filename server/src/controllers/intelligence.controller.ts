@@ -39,6 +39,14 @@ export const getTripIntelligence = async (req: Request, res: Response) => {
 
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
+    // Security Authorization Rule (P0 Security Fix 1):
+    const isOwner = Boolean(userId && userId === trip.userId);
+    const isPublic = trip.visibility === 'PUBLIC';
+
+    if (!isOwner && !isPublic) {
+      return res.status(403).json({ error: 'Access denied. Private trip intelligence is accessible only to its creator.' });
+    }
+
     // User preferences & saved destinations
     let savedCityIds: string[] = [];
     if (userId) {
@@ -58,8 +66,8 @@ export const getTripIntelligence = async (req: Request, res: Response) => {
       type: 'warning' | 'info';
     }> = [];
 
-    const totalBudget = trip.totalBudget || 0;
-    const totalExpensesCost = trip.expenses.reduce((sum, e) => sum + e.amount, 0);
+    const effectiveExpenses = isOwner ? trip.expenses : [];
+    const totalExpensesCost = effectiveExpenses.reduce((sum, e) => sum + e.amount, 0);
 
     let totalActivitiesCost = 0;
     const cityCostMap: Record<string, { name: string; cost: number }> = {};

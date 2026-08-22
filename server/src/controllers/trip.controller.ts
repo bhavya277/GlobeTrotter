@@ -341,6 +341,22 @@ export const updateTrip = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'End date cannot be before start date.' });
     }
 
+    // P1 Fix 14: Validate existing stops stay within new trip range
+    if (validated.startDate || validated.endDate) {
+      const existingStops = await prisma.tripStop.findMany({
+        where: { tripId: id },
+        include: { city: true },
+      });
+
+      for (const stop of existingStops) {
+        if (stop.startDate < start || stop.endDate > end) {
+          return res.status(400).json({
+            error: `Updated trip dates cannot exclude existing city stop '${stop.city.name}' (${new Date(stop.startDate).toLocaleDateString()} to ${new Date(stop.endDate).toLocaleDateString()}).`,
+          });
+        }
+      }
+    }
+
     const updatedTrip = await prisma.trip.update({
       where: { id },
       data: {

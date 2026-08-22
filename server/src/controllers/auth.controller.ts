@@ -128,6 +128,7 @@ export const getMe = async (req: Request, res: Response) => {
         bio: true,
         language: true,
         defaultCurrency: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -153,28 +154,38 @@ export const forgotPassword = async (req: Request, res: Response) => {
       where: { email: normalizedEmail },
     });
 
-    // To prevent account enumeration, always return generic success
+    // Account enumeration prevention: always return generic message
     if (!user) {
       return res.json({
-        message: 'If an account exists with this email, a password reset token has been generated.',
+        message: 'If an account exists with that email, a password reset link has been generated.',
       });
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiration
 
-    // Store reset token
+    // Clear old reset tokens for user
+    await prisma.passwordResetToken.deleteMany({
+      where: { userId: user.id },
+    });
+
+    // Store ONLY SHA-256 hash of reset token
     await prisma.passwordResetToken.create({
       data: {
         userId: user.id,
-        token: resetToken,
+        token: tokenHash,
         expiresAt,
       },
     });
 
+    // Log for local dev testing without leaking token in API HTTP response
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[DEV ONLY RESET TOKEN FOR ${normalizedEmail}]: ${rawToken}`);
+    }
+
     res.json({
-      message: 'Password reset link/token generated successfully.',
-      resetToken, // Returned for testing / demo purposes
+      message: 'If an account exists with that email, a password reset link has been generated.',
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -189,8 +200,11 @@ export const resetPassword = async (req: Request, res: Response) => {
   try {
     const validated = resetPasswordSchema.parse(req.body);
 
+    // Hash incoming token to compare against stored hash
+    const tokenHash = crypto.createHash('sha256').update(validated.token).digest('hex');
+
     const storedToken = await prisma.passwordResetToken.findUnique({
-      where: { token: validated.token },
+      where: { token: tokenHash },
       include: { user: true },
     });
 
@@ -200,15 +214,16 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     const newPasswordHash = await hashPassword(validated.newPassword);
 
-    await prisma.user.update({
-      where: { id: storedToken.userId },
-      data: { passwordHash: newPasswordHash },
-    });
-
-    // Delete used token
-    await prisma.passwordResetToken.delete({
-      where: { id: storedToken.id },
-    });
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: storedToken.userId },
+        data: { passwordHash: newPasswordHash },
+      }),
+      // Single-use token invalidation
+      prisma.passwordResetToken.delete({
+        where: { id: storedToken.id },
+      }),
+    ]);
 
     res.json({ message: 'Password has been reset successfully. Please log in with your new password.' });
   } catch (error: any) {

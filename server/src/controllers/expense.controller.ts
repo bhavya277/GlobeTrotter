@@ -154,6 +154,27 @@ export const getTripExpenseSummary = async (req: Request, res: Response) => {
       };
     });
 
+    // 6. Automatic Pre-Trip Budget Estimation Engine (P0 PS Fix 12)
+    let estimatedStayCost = 0;
+    let estimatedMealsCost = 0;
+    let estimatedTransportCost = 0;
+    let estimatedActivitiesCost = 0;
+
+    trip.stops.forEach((stop) => {
+      const stopDays = Math.max(1, Math.ceil((new Date(stop.endDate).getTime() - new Date(stop.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      const costFactor = stop.city.costIndex || 3.0;
+
+      estimatedStayCost += Math.round(costFactor * 1500 * stopDays);
+      estimatedMealsCost += Math.round(costFactor * 800 * stopDays);
+      estimatedTransportCost += Math.round(costFactor * 400 * stopDays);
+
+      const stopActCost = stop.tripActivities.reduce((s, a) => s + (a.customCost ?? a.activity?.estimatedCost ?? 0), 0);
+      estimatedActivitiesCost += stopActCost > 0 ? stopActCost : Math.round(costFactor * 600 * stopDays);
+    });
+
+    const estimatedTotalCost = estimatedStayCost + estimatedMealsCost + estimatedTransportCost + estimatedActivitiesCost;
+    const isEstimateOverBudget = totalBudget > 0 && estimatedTotalCost > totalBudget;
+
     res.json({
       summary: {
         currency: trip.currency || 'INR',
@@ -169,6 +190,16 @@ export const getTripExpenseSummary = async (req: Request, res: Response) => {
         averageDailyCost,
         targetDailyBudget,
         overBudgetDaysCount,
+      },
+      estimation: {
+        estimatedTotalCost,
+        estimatedStayCost,
+        estimatedMealsCost,
+        estimatedTransportCost,
+        estimatedActivitiesCost,
+        isEstimateOverBudget,
+        estimatedOverrun: isEstimateOverBudget ? estimatedTotalCost - totalBudget : 0,
+        averageDailyEstimate: totalDays > 0 ? Math.round(estimatedTotalCost / totalDays) : 0,
       },
       categoryTotals,
       dailyBreakdown,
@@ -191,6 +222,14 @@ export const createExpense = async (req: Request, res: Response) => {
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
     if (trip.userId !== req.user.userId) {
       return res.status(403).json({ error: 'Forbidden. You do not own this trip.' });
+    }
+
+    if (validated.tripStopId) {
+      const stop = await prisma.tripStop.findUnique({ where: { id: validated.tripStopId } });
+      if (!stop) return res.status(404).json({ error: 'Trip stop not found' });
+      if (stop.tripId !== validated.tripId) {
+        return res.status(400).json({ error: 'Trip stop does not belong to the specified trip.' });
+      }
     }
 
     const expense = await prisma.expense.create({

@@ -52,6 +52,16 @@ interface ExpenseSummaryData {
     targetDailyBudget: number;
     overBudgetDaysCount: number;
   };
+  estimation?: {
+    estimatedTotalCost: number;
+    estimatedStayCost: number;
+    estimatedMealsCost: number;
+    estimatedTransportCost: number;
+    estimatedActivitiesCost: number;
+    isEstimateOverBudget: boolean;
+    estimatedOverrun: number;
+    averageDailyEstimate: number;
+  };
   categoryTotals: Record<string, number>;
   dailyBreakdown: Array<{
     dateStr: string;
@@ -232,6 +242,52 @@ export const TripBudget: React.FC = () => {
             <span className="text-rose-400 font-bold">
               {summary.overBudgetDaysCount} / {summary.totalDays} Days Exceeded Daily Target
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* AUTOMATIC PRE-TRIP BUDGET ESTIMATION ENGINE (P0 PS Fix 12) */}
+      {budgetData.estimation && (
+        <div className="glass-panel p-6 rounded-3xl border border-sky-500/30 bg-gradient-to-r from-navy-900 via-navy-850 to-navy-900 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-3 gap-2">
+            <div className="flex items-center space-x-2.5">
+              <Sparkles className="w-5 h-5 text-amber-400" />
+              <h3 className="text-base font-extrabold text-white">Automatic Pre-Trip Budget Estimation Engine</h3>
+            </div>
+            <span className="text-xs font-extrabold text-sky-400 bg-sky-500/10 px-3 py-1 rounded-xl border border-sky-500/20">
+              Est. Total: ₹{budgetData.estimation.estimatedTotalCost.toLocaleString()} INR
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-1">
+            <div className="p-3.5 rounded-2xl bg-navy-800 border border-white/10 space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Estimated Stay</span>
+              <p className="text-lg font-black text-indigo-400">₹{budgetData.estimation.estimatedStayCost.toLocaleString()}</p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-navy-800 border border-white/10 space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Estimated Meals</span>
+              <p className="text-lg font-black text-amber-400">₹{budgetData.estimation.estimatedMealsCost.toLocaleString()}</p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-navy-800 border border-white/10 space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Est. Transport</span>
+              <p className="text-lg font-black text-sky-400">₹{budgetData.estimation.estimatedTransportCost.toLocaleString()}</p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-navy-800 border border-white/10 space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Est. Activities</span>
+              <p className="text-lg font-black text-emerald-400">₹{budgetData.estimation.estimatedActivitiesCost.toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div className="text-xs text-slate-400 flex items-center justify-between pt-2 border-t border-white/10">
+            <span>Daily Estimate: <span className="font-bold text-white">₹{budgetData.estimation.averageDailyEstimate.toLocaleString()} / day</span></span>
+            {budgetData.estimation.isEstimateOverBudget ? (
+              <span className="text-rose-400 font-extrabold">⚠️ Pre-trip estimate exceeds target budget cap by ₹{budgetData.estimation.estimatedOverrun.toLocaleString()}</span>
+            ) : (
+              <span className="text-emerald-400 font-extrabold">✅ Pre-trip estimate fits within allocated budget cap</span>
+            )}
           </div>
         </div>
       )}

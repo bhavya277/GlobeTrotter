@@ -22,6 +22,7 @@ import {
   Edit2,
   X,
   AlertCircle,
+  GripVertical,
 } from 'lucide-react';
 
 export const ItineraryBuilder: React.FC = () => {
@@ -243,6 +244,39 @@ export const ItineraryBuilder: React.FC = () => {
     }
   };
 
+  // Drag and Drop Activity Reordering
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIdx(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === dropIndex || !activeStop) return;
+
+    const newActivities = [...(activeStop.tripActivities || [])];
+    const [movedItem] = newActivities.splice(draggedIdx, 1);
+    newActivities.splice(dropIndex, 0, movedItem);
+
+    const orderedActivityIds = newActivities.map((a) => a.id);
+    setDraggedIdx(null);
+
+    try {
+      await api.tripActivities.reorder(orderedActivityIds);
+      fetchTripDetails();
+    } catch (err) {
+      console.error('Failed to reorder activities:', err);
+      fetchTripDetails(); // Revert visual order on error
+    }
+  };
+
   if (loading || !trip) {
     return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-400">Loading itinerary builder...</div>;
   }
@@ -404,7 +438,7 @@ export const ItineraryBuilder: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {scheduledActivities.map((act) => {
+                {scheduledActivities.map((act, actIndex) => {
                   const title = act.activity?.name || act.customName || 'Scheduled Event';
                   const category = act.activity?.category || act.category || 'General';
                   const cost = act.customCost ?? act.activity?.estimatedCost ?? 0;
@@ -413,12 +447,22 @@ export const ItineraryBuilder: React.FC = () => {
                   return (
                     <div
                       key={act.id}
-                      className={`glass-card p-4 rounded-2xl border transition-all flex items-start space-x-4 ${
+                      draggable={true}
+                      onDragStart={(e) => handleDragStart(e, actIndex)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, actIndex)}
+                      className={`glass-card p-4 rounded-2xl border transition-all flex items-start space-x-3 cursor-grab active:cursor-grabbing ${
+                        draggedIdx === actIndex ? 'opacity-40 border-sky-400 border-dashed' : ''
+                      } ${
                         act.isCompleted
                           ? 'border-emerald-500/30 opacity-70 bg-emerald-950/10'
                           : 'border-slate-800 hover:border-slate-700'
                       }`}
                     >
+                      <div className="mt-1 text-slate-500 hover:text-slate-300 cursor-grab" title="Drag to reorder">
+                        <GripVertical className="w-5 h-5" />
+                      </div>
+
                       <button
                         onClick={() => handleToggleComplete(act.id, act.isCompleted)}
                         className="mt-1 text-slate-400 hover:text-emerald-400 transition-colors"

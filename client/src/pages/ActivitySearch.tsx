@@ -46,6 +46,7 @@ export const ActivitySearch: React.FC = () => {
         cityId: selectedCityId !== 'all' ? selectedCityId : undefined,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
         maxCost: maxCost < 10000 ? maxCost : undefined,
+        maxDuration: maxDuration < 360 ? maxDuration : undefined,
       });
       setActivities(res.activities);
     } catch (err) {

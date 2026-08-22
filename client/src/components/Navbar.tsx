@@ -70,6 +70,17 @@ export const Navbar: React.FC = () => {
                 <span>Explore Cities</span>
               </Link>
               <Link
+                to="/activities"
+                className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                  isActive('/activities')
+                    ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Compass className="w-4 h-4 text-amber-400" />
+                <span>Activities</span>
+              </Link>
+              <Link
                 to="/my-trips"
                 className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                   isActive('/my-trips')

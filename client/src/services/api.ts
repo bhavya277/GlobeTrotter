@@ -85,7 +85,7 @@ export const api = {
 
   // Activity Catalog APIs
   activities: {
-    getAll: async (params?: { cityId?: string; category?: string; search?: string; maxCost?: number }) => {
+    getAll: async (params?: { cityId?: string; category?: string; search?: string; maxCost?: number; maxDuration?: number }) => {
       const query = new URLSearchParams(params as any || {}).toString();
       const res = await fetch(`${API_BASE}/activities?${query}`);
       return handleResponse<{ activities: Activity[] }>(res);

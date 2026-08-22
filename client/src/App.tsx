@@ -17,6 +17,7 @@ import { TripBudget } from './pages/TripBudget';
 import { TripCalendar } from './pages/TripCalendar';
 import { PublicTripView } from './pages/PublicTripView';
 import { CitySearch } from './pages/CitySearch';
+import { ActivitySearch } from './pages/ActivitySearch';
 import { CityDetail } from './pages/CityDetail';
 import { Profile } from './pages/Profile';
 import { SavedDestinations } from './pages/SavedDestinations';
@@ -52,6 +53,7 @@ export const AppContent: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/cities" element={<CitySearch />} />
+          <Route path="/activities" element={<ActivitySearch />} />
           <Route path="/cities/:id" element={<CityDetail />} />
           <Route path="/share/:token" element={<PublicTripView />} />
 
