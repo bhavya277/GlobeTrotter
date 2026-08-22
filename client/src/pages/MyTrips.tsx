@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
+import { SkeletonGrid } from '../components/SkeletonLoader';
 import { Trip } from '../types';
 import {
   Calendar,
@@ -190,11 +191,7 @@ export const MyTrips: React.FC = () => {
 
       {/* Trips Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="glass-panel h-80 rounded-2xl animate-pulse"></div>
-          ))}
-        </div>
+        <SkeletonGrid count={6} />
       ) : filteredTrips.length === 0 ? (
         <div className="glass-panel p-12 rounded-3xl text-center space-y-4 border border-dashed border-slate-800">
           <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
@@ -246,7 +243,7 @@ export const MyTrips: React.FC = () => {
                       {trip.name}
                     </h3>
                     <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 shrink-0">
-                      ${trip.totalBudget?.toLocaleString()} {trip.currency}
+                      ₹{trip.totalBudget?.toLocaleString()} INR (₹)
                     </span>
                   </div>
 
