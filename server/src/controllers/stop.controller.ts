@@ -46,7 +46,25 @@ export const addStop = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Stop departure date cannot be before arrival date.' });
     }
 
-    // Dynamic Trip Dates Expansion: Automatically adjust trip dates to fit user selected stop dates
+    // Overlapping Date Conflict Validation across cities in the same trip
+    const overlappingStop = await prisma.tripStop.findFirst({
+      where: {
+        tripId,
+        AND: [
+          { startDate: { lte: stopEnd } },
+          { endDate: { gte: stopStart } },
+        ],
+      },
+      include: { city: true },
+    });
+
+    if (overlappingStop) {
+      return res.status(400).json({
+        error: `Date Conflict: You already have a stop scheduled in ${overlappingStop.city.name} from ${new Date(overlappingStop.startDate).toLocaleDateString()} to ${new Date(overlappingStop.endDate).toLocaleDateString()}. Multiple city stops cannot have overlapping dates.`,
+      });
+    }
+
+    // Dynamic Trip Dates Expansion: Automatically adjust parent trip dates to fit user selected stop dates
     let newTripStart = new Date(trip.startDate);
     let newTripEnd = new Date(trip.endDate);
     let tripNeedsUpdate = false;
@@ -124,7 +142,26 @@ export const updateStop = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Stop departure date cannot be before arrival date.' });
     }
 
-    // Dynamic Trip Dates Expansion: Automatically adjust trip dates to fit user selected stop dates
+    // Overlapping Date Conflict Validation (excluding current stop being edited)
+    const overlappingStop = await prisma.tripStop.findFirst({
+      where: {
+        tripId,
+        id: { not: stopId },
+        AND: [
+          { startDate: { lte: stopEnd } },
+          { endDate: { gte: stopStart } },
+        ],
+      },
+      include: { city: true },
+    });
+
+    if (overlappingStop) {
+      return res.status(400).json({
+        error: `Date Conflict: You already have a stop scheduled in ${overlappingStop.city.name} from ${new Date(overlappingStop.startDate).toLocaleDateString()} to ${new Date(overlappingStop.endDate).toLocaleDateString()}. Multiple city stops cannot have overlapping dates.`,
+      });
+    }
+
+    // Dynamic Trip Dates Expansion
     let newTripStart = new Date(trip.startDate);
     let newTripEnd = new Date(trip.endDate);
     let tripNeedsUpdate = false;

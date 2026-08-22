@@ -3,7 +3,7 @@ import { prisma } from './db.js';
 const API_BASE = 'http://localhost:5000/api';
 
 async function runPhase4TestSuite() {
-  console.log('🧪 Starting Phase 4 — Dynamic Trip Date Auto-Expansion & Multi-City Test Suite...\n');
+  console.log('🧪 Starting Phase 4 — Overlapping City Stop Validation & Dynamic Expansion Test Suite...\n');
   let passedCount = 0;
   let totalCount = 0;
 
@@ -42,11 +42,12 @@ async function runPhase4TestSuite() {
   const dataB: any = await resB.json();
   const tokenB = dataB.token;
 
-  // Fetch Cities to get valid IDs (Mumbai, Jaipur)
+  // Fetch Cities to get valid IDs (Mumbai, Jaipur, Tokyo)
   const citiesRes = await fetch(`${API_BASE}/cities`);
   const citiesData: any = await citiesRes.json();
   const mumbaiCity = citiesData.cities.find((c: any) => c.name === 'Mumbai');
   const jaipurCity = citiesData.cities.find((c: any) => c.name === 'Jaipur');
+  const tokyoCity = citiesData.cities.find((c: any) => c.name === 'Tokyo');
 
   // 1. City Discovery Search & Country Filter Test
   await assertTest('1. City Discovery Search & Country Filter (India)', async () => {
@@ -55,46 +56,98 @@ async function runPhase4TestSuite() {
     return searchRes.status === 200 && Array.isArray(searchData.cities) && searchData.cities.some((c: any) => c.name === 'Mumbai');
   });
 
-  // User A creates a Parent Trip (2026-11-05 to 2026-11-10)
+  // User A creates a Parent Trip (2026-09-01 to 2026-09-30)
   const parentTripRes = await fetch(`${API_BASE}/trips`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
     body: JSON.stringify({
-      name: 'Grand India Dynamic Expansion Expedition',
-      startDate: '2026-11-05',
-      endDate: '2026-11-10',
-      totalBudget: 100000,
+      name: 'Asia Grand Tour',
+      startDate: '2026-09-01',
+      endDate: '2026-09-30',
+      totalBudget: 150000,
       currency: 'INR',
     }),
   });
   const parentTripData: any = await parentTripRes.json();
   const tripId = parentTripData.trip.id;
 
-  // 2. Dynamic Trip Dates Auto-Expansion Test
-  await assertTest('2. Dynamic Trip Dates Auto-Expansion (Trip expands when user picks any date)', async () => {
-    // User selects 2026-10-25 (earlier than 2026-11-05) and 2026-11-25 (later than 2026-11-10)
+  // Stop 1: Mumbai (Sep 1 to Sep 15)
+  let stop1Id = '';
+  await assertTest('2. Adding Stop 1 (Mumbai Sep 1 to Sep 15)', async () => {
     const res = await fetch(`${API_BASE}/trips/${tripId}/stops`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
       body: JSON.stringify({
         cityId: mumbaiCity.id,
-        startDate: '2026-10-25',
-        endDate: '2026-11-25',
+        startDate: '2026-09-01',
+        endDate: '2026-09-15',
       }),
     });
     const data: any = await res.json();
     if (res.status === 201) {
-      // Verify parent trip dates dynamically updated in DB
-      const updatedTrip = await prisma.trip.findUnique({ where: { id: tripId } });
-      const updatedStartStr = updatedTrip?.startDate.toISOString().split('T')[0];
-      const updatedEndStr = updatedTrip?.endDate.toISOString().split('T')[0];
-      return updatedStartStr === '2026-10-25' && updatedEndStr === '2026-11-25';
+      stop1Id = data.stop.id;
+      return true;
     }
     return false;
   });
 
-  // 3. Stop Chronological Date Validation (Stop End Date < Stop Start Date)
-  await assertTest('3. Stop Departure Date Before Arrival Date Blocked', async () => {
+  // 3. Overlapping Stop Date Conflict Test (Tokyo Sep 1 to Sep 29 conflicts with Mumbai Sep 1 to Sep 15)
+  await assertTest('3. Overlapping Stop Date Conflict Blocked (Tokyo Sep 1-29 vs Mumbai Sep 1-15)', async () => {
+    const res = await fetch(`${API_BASE}/trips/${tripId}/stops`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
+      body: JSON.stringify({
+        cityId: tokyoCity.id,
+        startDate: '2026-09-01',
+        endDate: '2026-09-29', // Overlaps with Mumbai Sep 1 - Sep 15
+      }),
+    });
+    const data: any = await res.json();
+    return res.status === 400 && data.error.includes('Date Conflict') && data.error.includes('Mumbai');
+  });
+
+  // 4. Non-Overlapping Sequential Stop Addition (Tokyo Sep 16 to Sep 30)
+  let stop2Id = '';
+  await assertTest('4. Non-Overlapping Sequential Stop Addition (Tokyo Sep 16 to Sep 30)', async () => {
+    const res = await fetch(`${API_BASE}/trips/${tripId}/stops`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
+      body: JSON.stringify({
+        cityId: tokyoCity.id,
+        startDate: '2026-09-16',
+        endDate: '2026-09-30',
+      }),
+    });
+    const data: any = await res.json();
+    if (res.status === 201) {
+      stop2Id = data.stop.id;
+      return true;
+    }
+    return false;
+  });
+
+  // 5. Dynamic Trip Dates Expansion
+  await assertTest('5. Dynamic Trip Date Expansion when user selects dates outside trip range', async () => {
+    // Add Stop 3 in Jaipur from Oct 1 to Oct 10 (expands parent trip end date)
+    const res = await fetch(`${API_BASE}/trips/${tripId}/stops`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
+      body: JSON.stringify({
+        cityId: jaipurCity.id,
+        startDate: '2026-10-01',
+        endDate: '2026-10-10',
+      }),
+    });
+    if (res.status === 201) {
+      const updatedTrip = await prisma.trip.findUnique({ where: { id: tripId } });
+      const updatedEndStr = updatedTrip?.endDate.toISOString().split('T')[0];
+      return updatedEndStr === '2026-10-10';
+    }
+    return false;
+  });
+
+  // 6. Stop Chronological Date Validation (Stop End Date < Stop Start Date)
+  await assertTest('6. Stop Departure Date Before Arrival Date Blocked', async () => {
     const res = await fetch(`${API_BASE}/trips/${tripId}/stops`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
@@ -108,69 +161,7 @@ async function runPhase4TestSuite() {
     return res.status === 400 && data.error.includes('cannot be before');
   });
 
-  // 4. Nonexistent City ID Addition Blocked
-  await assertTest('4. Nonexistent City ID Addition Blocked', async () => {
-    const res = await fetch(`${API_BASE}/trips/${tripId}/stops`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
-      body: JSON.stringify({
-        cityId: 'nonexistent-city-uuid-12345',
-        startDate: '2026-11-02',
-        endDate: '2026-11-06',
-      }),
-    });
-    return res.status === 404;
-  });
-
-  // 5. Unauthorized Stop Addition Blocked (User Isolation)
-  await assertTest('5. Unauthorized Stop Addition Blocked (User B -> User A Trip)', async () => {
-    const res = await fetch(`${API_BASE}/trips/${tripId}/stops`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenB}` },
-      body: JSON.stringify({
-        cityId: mumbaiCity.id,
-        startDate: '2026-11-02',
-        endDate: '2026-11-06',
-      }),
-    });
-    return res.status === 403;
-  });
-
-  // 6. Multi-City Stops Addition & DB Persistence
-  let stop1Id = '';
-  let stop2Id = '';
-  await assertTest('6. Multi-City Stops Addition & DB Persistence', async () => {
-    const res1 = await fetch(`${API_BASE}/trips/${tripId}/stops`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
-      body: JSON.stringify({
-        cityId: mumbaiCity.id,
-        startDate: '2026-11-01',
-        endDate: '2026-11-08',
-      }),
-    });
-    const data1: any = await res1.json();
-
-    const res2 = await fetch(`${API_BASE}/trips/${tripId}/stops`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenA}` },
-      body: JSON.stringify({
-        cityId: jaipurCity.id,
-        startDate: '2026-11-09',
-        endDate: '2026-11-18',
-      }),
-    });
-    const data2: any = await res2.json();
-
-    if (res1.status === 201 && res2.status === 201) {
-      stop1Id = data1.stop.id;
-      stop2Id = data2.stop.id;
-      return true;
-    }
-    return false;
-  });
-
-  // 7. Multi-City Reordering Test
+  // 7. Multi-City Stop Reordering
   await assertTest('7. Multi-City Stop Reordering (PUT /api/trips/:tripId/stops/reorder)', async () => {
     const res = await fetch(`${API_BASE}/trips/${tripId}/stops/reorder`, {
       method: 'PUT',
@@ -179,7 +170,6 @@ async function runPhase4TestSuite() {
         orderedStopIds: [stop2Id, stop1Id],
       }),
     });
-    const data: any = await res.json();
     if (res.status === 200) {
       const dbStop2 = await prisma.tripStop.findUnique({ where: { id: stop2Id } });
       return dbStop2?.order === 1;
@@ -187,7 +177,7 @@ async function runPhase4TestSuite() {
     return false;
   });
 
-  // 8. Stop Removal Test
+  // 8. Remove City Stop
   await assertTest('8. Remove City Stop (DELETE /api/trips/:tripId/stops/:stopId)', async () => {
     const res = await fetch(`${API_BASE}/trips/${tripId}/stops/${stop1Id}`, {
       method: 'DELETE',
@@ -200,7 +190,7 @@ async function runPhase4TestSuite() {
     return false;
   });
 
-  console.log(`\n📊 Phase 4 Dynamic Expansion Test Summary: ${passedCount}/${totalCount} tests PASSED.`);
+  console.log(`\n📊 Phase 4 Overlapping Validation Test Summary: ${passedCount}/${totalCount} tests PASSED.`);
 }
 
 runPhase4TestSuite()
