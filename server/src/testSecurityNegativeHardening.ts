@@ -264,6 +264,7 @@ async function runSecurityNegativeHardeningAudit() {
     // 15. Expired reset token
     const expiredTokenRaw = `expired_raw_token_${Date.now()}`;
     const expiredHash = (await import('crypto')).createHash('sha256').update(expiredTokenRaw).digest('hex');
+    await prisma.passwordResetToken.deleteMany({ where: { userId: data1.user.id } });
     await prisma.passwordResetToken.create({
       data: {
         userId: data1.user.id,

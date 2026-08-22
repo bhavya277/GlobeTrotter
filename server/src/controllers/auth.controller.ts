@@ -179,11 +179,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
       },
     });
 
-    // Log for local dev testing without leaking token in API HTTP response
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[DEV ONLY RESET TOKEN FOR ${normalizedEmail}]: ${rawToken}`);
-    }
-
     res.json({
       message: 'If an account exists with that email, a password reset link has been generated.',
     });

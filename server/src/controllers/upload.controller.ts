@@ -12,6 +12,45 @@ const ALLOWED_MIME_TYPES: Record<string, string> = {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
 
+function isValidMagicBytes(buffer: Buffer): boolean {
+  if (!buffer || buffer.length < 12) return false;
+
+  // JPEG check: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return true;
+  }
+
+  // PNG check: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return true;
+  }
+
+  // WEBP check: RIFF .... WEBP
+  if (
+    buffer[0] === 0x52 && // 'R'
+    buffer[1] === 0x49 && // 'I'
+    buffer[2] === 0x46 && // 'F'
+    buffer[3] === 0x46 && // 'F'
+    buffer[8] === 0x57 && // 'W'
+    buffer[9] === 0x45 && // 'E'
+    buffer[10] === 0x42 && // 'B'
+    buffer[11] === 0x50   // 'P'
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export const uploadImage = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
@@ -45,6 +84,13 @@ export const uploadImage = async (req: Request, res: Response) => {
     if (buffer.length > MAX_FILE_SIZE) {
       return res.status(400).json({
         error: 'File size exceeds maximum allowed limit of 5MB.',
+      });
+    }
+
+    // Magic-Byte Binary File Signature Validation (Prevents MIME spoofing, SVG, Executables, XSS payloads)
+    if (!isValidMagicBytes(buffer)) {
+      return res.status(400).json({
+        error: 'File content validation failed. Uploaded file is corrupted, spoofed, or not a valid JPG/PNG/WebP image.',
       });
     }
 

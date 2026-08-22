@@ -112,7 +112,7 @@ export const MyTrips: React.FC = () => {
       setTrips(trips.filter((t) => t.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (err: any) {
-      alert(err.message || 'Failed to delete trip.');
+      setError(err.message || 'Failed to delete trip.');
     }
   };
 

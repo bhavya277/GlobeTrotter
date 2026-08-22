@@ -36,6 +36,7 @@ export const TripCalendar: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [days, setDays] = useState<DayItem[]>([]);
   const [viewMode, setViewMode] = useState<'TIMELINE' | 'CALENDAR'>('TIMELINE');
   const [expandedDayDates, setExpandedDayDates] = useState<Record<string, boolean>>({});
@@ -187,7 +188,7 @@ export const TripCalendar: React.FC = () => {
         await api.tripActivities.delete(actId);
         await fetchTripDetails();
       } catch (err: any) {
-        alert(err.message || 'Failed to delete activity');
+        setError(err.message || 'Failed to delete activity');
       }
     }
   };

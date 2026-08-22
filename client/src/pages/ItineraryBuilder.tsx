@@ -179,7 +179,7 @@ export const ItineraryBuilder: React.FC = () => {
         await api.trips.deleteStop(trip.id, stopId);
         fetchTripDetails();
       } catch (err: any) {
-        alert(err.message || 'Failed to remove stop');
+        setStopError(err.message || 'Failed to remove stop');
       }
     }
   };
@@ -199,7 +199,7 @@ export const ItineraryBuilder: React.FC = () => {
       setIsAddModalOpen(false);
       fetchTripDetails();
     } catch (err: any) {
-      alert(err.message || 'Failed to add activity');
+      setStopError(err.message || 'Failed to add activity');
     }
   };
 
@@ -223,7 +223,7 @@ export const ItineraryBuilder: React.FC = () => {
       setNotes('');
       fetchTripDetails();
     } catch (err: any) {
-      alert(err.message || 'Failed to add custom activity');
+      setStopError(err.message || 'Failed to add custom activity');
     }
   };
 

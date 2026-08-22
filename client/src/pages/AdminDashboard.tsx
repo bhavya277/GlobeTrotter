@@ -59,7 +59,7 @@ export const AdminDashboard: React.FC = () => {
       await api.admin.updateUserRole(userId, newRole);
       setUsersList(usersList.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
     } catch (err: any) {
-      alert(err.message || 'Failed to update user role');
+      setError(err.message || 'Failed to update user role');
     }
   };
 
@@ -69,7 +69,7 @@ export const AdminDashboard: React.FC = () => {
         await api.admin.deleteUser(userId);
         setUsersList(usersList.filter((u) => u.id !== userId));
       } catch (err: any) {
-        alert(err.message || 'Failed to delete user');
+        setError(err.message || 'Failed to delete user');
       }
     }
   };

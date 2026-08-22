@@ -101,7 +101,6 @@ export const Profile: React.FC = () => {
 
     try {
       await api.users.deleteAccount(confirmDeleteText);
-      alert('Your account and all associated itineraries have been permanently deleted.');
       logout();
     } catch (err: any) {
       setDeleteError(err.message || 'Failed to delete account');

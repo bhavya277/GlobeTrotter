@@ -52,14 +52,12 @@ export const PublicTripView: React.FC = () => {
     setCopyingTrip(true);
     try {
       const res = await api.trips.copy(token);
-      alert('Trip copied successfully to your account!');
       navigate(`/trip/${res.trip.id}/builder`);
     } catch (err: any) {
       if (err.message.includes('Unauthorized') || err.message.includes('401')) {
-        alert('Please log in or sign up to copy this trip to your account!');
         navigate('/login');
       } else {
-        alert(err.message || 'Failed to copy trip');
+        setError(err.message || 'Failed to copy trip');
       }
     } finally {
       setCopyingTrip(false);

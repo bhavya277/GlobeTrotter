@@ -29,7 +29,7 @@ async function run25RequirementsCheck() {
       id: 1,
       name: 'Login / Signup Works (bcrypt hashing & JWT generation)',
       test: async () => {
-        const email = `audit_${Date.now()}@globetrotter.com`;
+        const email = `audit_${Date.now()}_${Math.random().toString(36).substring(7)}@globetrotter.com`;
         const regRes = await fetch(`${API_BASE}/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -39,7 +39,7 @@ async function run25RequirementsCheck() {
         tokenUser1 = regData.token;
         user1Obj = regData.user;
 
-        const email2 = `audit_user2_${Date.now()}@globetrotter.com`;
+        const email2 = `audit_user2_${Date.now()}_${Math.random().toString(36).substring(7)}@globetrotter.com`;
         const regRes2 = await fetch(`${API_BASE}/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
