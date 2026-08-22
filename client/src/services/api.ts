@@ -279,4 +279,49 @@ export const api = {
       return handleResponse<{ message: string }>(res);
     },
   },
+
+  // Unique Intelligence Layer APIs (Phase 9)
+  intelligence: {
+    getTripIntelligence: async (tripId: string) => {
+      const res = await fetch(`${API_BASE}/trips/${tripId}/intelligence`, {
+        headers: { ...getAuthHeaders() },
+      });
+      return handleResponse<{
+        intelligence: {
+          budgetOptimizer: Array<{
+            title: string;
+            percentageShare: number;
+            insight: string;
+            suggestion: string;
+            type: 'warning' | 'info';
+          }>;
+          dailyBalance: Array<{
+            dateStr: string;
+            activityCount: number;
+            estimatedHours: number;
+            insight: string;
+            recommendation: string;
+            isOverloaded: boolean;
+          }>;
+          travelFlow: {
+            totalDistanceKm: number;
+            stopsCount: number;
+            routeLegs: Array<{ from: string; to: string; distanceKm: number }>;
+            isFlowEfficient: boolean;
+            flowInsight: string;
+          };
+          personalizedRecommendations: Array<{
+            id: string;
+            name: string;
+            cityName: string;
+            category: string;
+            estimatedCost: number;
+            rating: number;
+            image: string;
+            reason: string;
+          }>;
+        };
+      }>(res);
+    },
+  },
 };

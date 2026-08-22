@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
+import { IntelligencePanel } from '../components/IntelligencePanel';
 import { Trip, TripStop, Activity, TripActivity, City } from '../types';
 import {
   Calendar,
@@ -488,6 +489,9 @@ export const ItineraryBuilder: React.FC = () => {
       ) : (
         <div className="glass-panel p-8 text-center text-slate-400">No stop selected.</div>
       )}
+
+      {/* Intelligence Layer Component */}
+      <IntelligencePanel tripId={trip.id} />
 
       {/* Add City Stop Modal */}
       {isAddStopModalOpen && (
