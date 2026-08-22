@@ -94,7 +94,28 @@ export const getTripById = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied. Private trips are accessible only to their creator.' });
     }
 
-    res.json({ trip, isOwner });
+    // Public Privacy Isolation (Item 3): Mask private notes and expenses for non-owner public viewers
+    if (!isOwner) {
+      const sanitizedStops = trip.stops.map((stop) => ({
+        ...stop,
+        notes: null,
+        expenses: [],
+        tripActivities: stop.tripActivities.map((act) => ({
+          ...act,
+          notes: null,
+        })),
+      }));
+
+      const sanitizedTrip = {
+        ...trip,
+        stops: sanitizedStops,
+        expenses: [],
+      };
+
+      return res.json({ trip: sanitizedTrip, isOwner: false });
+    }
+
+    res.json({ trip, isOwner: true });
   } catch (error) {
     console.error('Get trip error:', error);
     res.status(500).json({ error: 'Failed to fetch trip details' });
