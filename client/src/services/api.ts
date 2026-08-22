@@ -89,8 +89,16 @@ export const api = {
   // City Catalog APIs
   cities: {
     getAll: async (params?: { search?: string; country?: string; region?: string; minPopularity?: number; maxCost?: number; sortBy?: string }) => {
-      const query = new URLSearchParams(params as any || {}).toString();
-      const res = await fetch(`${API_BASE}/cities?${query}`);
+      const cleanParams: Record<string, string> = {};
+      if (params) {
+        Object.entries(params).forEach(([key, val]) => {
+          if (val !== undefined && val !== null && val !== '') {
+            cleanParams[key] = String(val);
+          }
+        });
+      }
+      const query = new URLSearchParams(cleanParams).toString();
+      const res = await fetch(`${API_BASE}/cities${query ? `?${query}` : ''}`);
       return handleResponse<{ cities: City[] }>(res);
     },
     getById: async (id: string) => {
@@ -102,8 +110,16 @@ export const api = {
   // Activity Catalog APIs
   activities: {
     getAll: async (params?: { cityId?: string; category?: string; search?: string; maxCost?: number; maxDuration?: number }) => {
-      const query = new URLSearchParams(params as any || {}).toString();
-      const res = await fetch(`${API_BASE}/activities?${query}`);
+      const cleanParams: Record<string, string> = {};
+      if (params) {
+        Object.entries(params).forEach(([key, val]) => {
+          if (val !== undefined && val !== null && val !== '') {
+            cleanParams[key] = String(val);
+          }
+        });
+      }
+      const query = new URLSearchParams(cleanParams).toString();
+      const res = await fetch(`${API_BASE}/activities${query ? `?${query}` : ''}`);
       return handleResponse<{ activities: Activity[] }>(res);
     },
   },

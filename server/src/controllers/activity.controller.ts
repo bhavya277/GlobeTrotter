@@ -7,28 +7,30 @@ export const getActivities = async (req: Request, res: Response) => {
 
     const whereClause: any = {};
 
-    if (cityId && typeof cityId === 'string' && cityId !== 'all') {
+    if (cityId && typeof cityId === 'string' && cityId !== 'all' && cityId !== 'undefined' && cityId !== 'null') {
       whereClause.cityId = cityId;
     }
 
-    if (category && typeof category === 'string' && category !== 'all') {
+    if (category && typeof category === 'string' && category !== 'all' && category !== 'undefined' && category !== 'null') {
       whereClause.category = category;
     }
 
-    if (search && typeof search === 'string') {
+    if (search && typeof search === 'string' && search.trim() !== '') {
       whereClause.OR = [
-        { name: { contains: search } },
-        { description: { contains: search } },
-        { category: { contains: search } },
+        { name: { contains: search.trim() } },
+        { description: { contains: search.trim() } },
+        { category: { contains: search.trim() } },
       ];
     }
 
-    if (maxCost) {
-      whereClause.estimatedCost = { lte: parseFloat(maxCost as string) };
+    if (maxCost && maxCost !== 'undefined' && maxCost !== 'null') {
+      const val = parseFloat(maxCost as string);
+      if (!isNaN(val)) whereClause.estimatedCost = { lte: val };
     }
 
-    if (maxDuration) {
-      whereClause.durationMinutes = { lte: parseInt(maxDuration as string) };
+    if (maxDuration && maxDuration !== 'undefined' && maxDuration !== 'null') {
+      const val = parseInt(maxDuration as string);
+      if (!isNaN(val)) whereClause.durationMinutes = { lte: val };
     }
 
     const activities = await prisma.activity.findMany({

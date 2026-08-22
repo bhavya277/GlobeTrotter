@@ -7,28 +7,30 @@ export const getCities = async (req: Request, res: Response) => {
 
     const whereClause: any = {};
 
-    if (search && typeof search === 'string') {
+    if (search && typeof search === 'string' && search.trim() !== '') {
       whereClause.OR = [
-        { name: { contains: search } },
-        { country: { contains: search } },
-        { region: { contains: search } },
+        { name: { contains: search.trim() } },
+        { country: { contains: search.trim() } },
+        { region: { contains: search.trim() } },
       ];
     }
 
-    if (country && typeof country === 'string' && country !== 'all') {
+    if (country && typeof country === 'string' && country !== 'all' && country !== 'undefined' && country !== 'null') {
       whereClause.country = { equals: country };
     }
 
-    if (region && typeof region === 'string' && region !== 'all') {
+    if (region && typeof region === 'string' && region !== 'all' && region !== 'undefined' && region !== 'null') {
       whereClause.region = { equals: region };
     }
 
-    if (minPopularity) {
-      whereClause.popularity = { gte: parseFloat(minPopularity as string) };
+    if (minPopularity && minPopularity !== 'undefined' && minPopularity !== 'null') {
+      const val = parseFloat(minPopularity as string);
+      if (!isNaN(val)) whereClause.popularity = { gte: val };
     }
 
-    if (maxCost) {
-      whereClause.costIndex = { lte: parseFloat(maxCost as string) };
+    if (maxCost && maxCost !== 'undefined' && maxCost !== 'null') {
+      const val = parseFloat(maxCost as string);
+      if (!isNaN(val)) whereClause.costIndex = { lte: val };
     }
 
     let orderBy: any = { popularity: 'desc' };
