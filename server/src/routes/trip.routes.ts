@@ -4,6 +4,7 @@ import {
   getTripById,
   getTripByShareToken,
   createTrip,
+  copyTrip,
   updateTrip,
   deleteTrip,
 } from '../controllers/trip.controller.js';
@@ -14,7 +15,8 @@ const router = Router();
 
 router.get('/', authenticateToken, getMyTrips);
 router.post('/', authenticateToken, createTrip);
-router.get('/shared/:token', getTripByShareToken);
+router.post('/copy/:token', authenticateToken, copyTrip);
+router.get('/shared/:token', optionalAuthenticateToken, getTripByShareToken);
 router.get('/:id', optionalAuthenticateToken, getTripById);
 router.put('/:id', authenticateToken, updateTrip);
 router.delete('/:id', authenticateToken, deleteTrip);

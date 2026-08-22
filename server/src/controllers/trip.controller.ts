@@ -11,7 +11,7 @@ const createTripSchema = z.object({
   coverPhoto: z.string().optional(),
   visibility: z.enum(['PRIVATE', 'PUBLIC', 'UNLISTED']).default('PRIVATE'),
   totalBudget: z.number().nonnegative('Total budget must be non-negative').optional().default(0),
-  currency: z.string().default('USD'),
+  currency: z.string().default('INR'),
   cityIds: z.array(z.string()).optional(),
 });
 
@@ -86,12 +86,12 @@ export const getTripById = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Trip not found' });
     }
 
-    // Security Check: Rule 3 (User Isolation)
+    // Security Check: Rule 3 & Phase 10 User Isolation
     const isOwner = currentUserId === trip.userId;
     const isPublic = trip.visibility === 'PUBLIC';
 
     if (!isOwner && !isPublic) {
-      return res.status(403).json({ error: 'Access denied. You do not have permission to view this private trip.' });
+      return res.status(403).json({ error: 'Access denied. Private trips are accessible only to their creator.' });
     }
 
     res.json({ trip, isOwner });
@@ -131,6 +131,11 @@ export const getTripByShareToken = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Shared itinerary not found or link has expired.' });
     }
 
+    // Security: Ensure private trips cannot be accessed via share token if visibility is explicitly PRIVATE
+    if (trip.visibility === 'PRIVATE' && req.user?.userId !== trip.userId) {
+      return res.status(403).json({ error: 'Access denied. This trip is set to Private.' });
+    }
+
     res.json({ trip, isShared: true });
   } catch (error) {
     console.error('Get shared trip error:', error);
@@ -147,7 +152,6 @@ export const createTrip = async (req: Request, res: Response) => {
     const start = new Date(validated.startDate);
     const end = new Date(validated.endDate);
 
-    // Validation: End Date cannot be before Start Date
     if (end < start) {
       return res.status(400).json({ error: 'End date cannot be before start date.' });
     }
@@ -171,7 +175,6 @@ export const createTrip = async (req: Request, res: Response) => {
         },
       });
 
-      // Automatically create stops if cityIds provided
       if (validated.cityIds && validated.cityIds.length > 0) {
         const totalCities = validated.cityIds.length;
         const totalDurationDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
@@ -218,6 +221,105 @@ export const createTrip = async (req: Request, res: Response) => {
   }
 };
 
+export const copyTrip = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
+    const { token } = req.params;
+
+    // Find original trip by shareToken or id
+    const originalTrip = await prisma.trip.findFirst({
+      where: {
+        OR: [{ shareToken: token }, { id: token }],
+      },
+      include: {
+        stops: {
+          include: {
+            tripActivities: true,
+          },
+          orderBy: { order: 'asc' },
+        },
+      },
+    });
+
+    if (!originalTrip) {
+      return res.status(404).json({ error: 'Source trip to copy not found.' });
+    }
+
+    // Security Check: Verify source trip is PUBLIC or owned by requester
+    if (originalTrip.visibility === 'PRIVATE' && originalTrip.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Forbidden. Cannot copy a private trip.' });
+    }
+
+    const newShareToken = crypto.randomBytes(16).toString('hex');
+
+    // Create cloned trip owned 100% by requesting user (Phase 10 Rule)
+    const clonedTrip = await prisma.$transaction(async (tx) => {
+      const created = await tx.trip.create({
+        data: {
+          userId: req.user!.userId, // New owner!
+          name: `${originalTrip.name} (Copy)`,
+          description: originalTrip.description,
+          startDate: originalTrip.startDate,
+          endDate: originalTrip.endDate,
+          coverPhoto: originalTrip.coverPhoto,
+          visibility: 'PRIVATE', // Default copied trip to PRIVATE for requester
+          totalBudget: originalTrip.totalBudget,
+          currency: originalTrip.currency,
+          shareToken: newShareToken,
+        },
+      });
+
+      // Clone Stops and Activities
+      for (const stop of originalTrip.stops) {
+        const createdStop = await tx.tripStop.create({
+          data: {
+            tripId: created.id,
+            cityId: stop.cityId,
+            startDate: stop.startDate,
+            endDate: stop.endDate,
+            order: stop.order,
+            notes: stop.notes,
+          },
+        });
+
+        for (const act of stop.tripActivities) {
+          await tx.tripActivity.create({
+            data: {
+              tripStopId: createdStop.id,
+              activityId: act.activityId,
+              customName: act.customName,
+              category: act.category,
+              scheduledDate: act.scheduledDate,
+              startTime: act.startTime,
+              endTime: act.endTime,
+              customCost: act.customCost,
+              order: act.order,
+              notes: act.notes,
+              isCompleted: false,
+            },
+          });
+        }
+      }
+
+      return created;
+    });
+
+    const fullCopiedTrip = await prisma.trip.findUnique({
+      where: { id: clonedTrip.id },
+      include: {
+        stops: {
+          include: { city: true, tripActivities: true },
+        },
+      },
+    });
+
+    res.status(201).json({ trip: fullCopiedTrip, message: 'Trip successfully copied to your account!' });
+  } catch (error) {
+    console.error('Copy trip error:', error);
+    res.status(500).json({ error: 'Failed to copy trip itinerary' });
+  }
+};
+
 export const updateTrip = async (req: Request, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
@@ -226,7 +328,6 @@ export const updateTrip = async (req: Request, res: Response) => {
     const existingTrip = await prisma.trip.findUnique({ where: { id } });
     if (!existingTrip) return res.status(404).json({ error: 'Trip not found' });
 
-    // Security Check: Ownership verification (User Isolation)
     if (existingTrip.userId !== req.user.userId) {
       return res.status(403).json({ error: 'Forbidden. You do not own this trip.' });
     }
@@ -236,7 +337,6 @@ export const updateTrip = async (req: Request, res: Response) => {
     const start = validated.startDate ? new Date(validated.startDate) : existingTrip.startDate;
     const end = validated.endDate ? new Date(validated.endDate) : existingTrip.endDate;
 
-    // Validation: End Date cannot be before Start Date
     if (end < start) {
       return res.status(400).json({ error: 'End date cannot be before start date.' });
     }
@@ -278,7 +378,6 @@ export const deleteTrip = async (req: Request, res: Response) => {
     const existingTrip = await prisma.trip.findUnique({ where: { id } });
     if (!existingTrip) return res.status(404).json({ error: 'Trip not found' });
 
-    // Security Check: Ownership verification (User Isolation)
     if (existingTrip.userId !== req.user.userId) {
       return res.status(403).json({ error: 'Forbidden. You do not own this trip.' });
     }

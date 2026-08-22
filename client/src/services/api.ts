@@ -138,6 +138,13 @@ export const api = {
       });
       return handleResponse<{ trip: Trip }>(res);
     },
+    copy: async (token: string) => {
+      const res = await fetch(`${API_BASE}/trips/copy/${token}`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders() },
+      });
+      return handleResponse<{ trip: Trip; message: string }>(res);
+    },
     update: async (id: string, data: Partial<Trip>) => {
       const res = await fetch(`${API_BASE}/trips/${id}`, {
         method: 'PUT',
