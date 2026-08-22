@@ -20,8 +20,22 @@ model User {
   updatedAt        DateTime           @updatedAt
   trips            Trip[]
   savedDestinations SavedDestination[]
+  resetTokens      PasswordResetToken[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("password_reset_tokens")
 }
 
 model Trip {
