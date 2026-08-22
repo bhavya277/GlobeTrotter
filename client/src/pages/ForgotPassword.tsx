@@ -28,10 +28,8 @@ export const ForgotPassword: React.FC = () => {
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       <div className="max-w-md w-full space-y-8 glass-panel p-8 rounded-2xl shadow-2xl border border-slate-800 relative z-10">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 shadow-lg shadow-sky-500/30 mb-4">
-            <Globe className="w-8 h-8 text-white" />
-          </div>
+        <div className="text-center space-y-3">
+          <img src="/logo.png" alt="GlobeTrotter Logo" className="h-16 w-auto mx-auto rounded-2xl shadow-lg shadow-sky-500/20" />
           <h2 className="text-3xl font-extrabold text-white tracking-tight">
             Reset Password
           </h2>

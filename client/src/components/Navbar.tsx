@@ -36,12 +36,7 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to={user ? "/dashboard" : "/"} className="flex items-center space-x-3 group shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 via-teal-400 to-coral-500 flex items-center justify-center shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-transform duration-200">
-              <Globe className="w-5 h-5 text-white animate-spin-slow" />
-            </div>
-            <span className="text-xl font-black tracking-tight text-white">
-              Globe<span className="gradient-text">Trotter</span>
-            </span>
+            <img src="/logo.png" alt="GlobeTrotter Logo" className="h-11 w-auto rounded-xl shadow-md group-hover:scale-105 transition-transform duration-200" />
           </Link>
 
           {/* Desktop Navigation Links */}
