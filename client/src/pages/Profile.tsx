@@ -135,25 +135,59 @@ export const Profile: React.FC = () => {
       {/* Main Profile Form */}
       <form onSubmit={handleUpdateProfile} className="glass-panel p-8 rounded-3xl border border-slate-800 space-y-6">
         <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 pb-6 border-b border-slate-800">
-          <div className="relative group">
+          <div className="relative group shrink-0">
             <img
               src={profilePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'}
               alt={name}
               className="w-24 h-24 rounded-3xl object-cover ring-4 ring-sky-500/30 shadow-2xl"
             />
+            <label
+              htmlFor="profile-file-input"
+              className="absolute inset-0 bg-slate-950/60 rounded-3xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white cursor-pointer transition-opacity text-xs font-bold gap-1"
+            >
+              <Camera className="w-4 h-4" /> Change
+            </label>
           </div>
 
-          <div className="flex-1 w-full space-y-2">
-            <label className="block text-xs font-semibold text-slate-300 uppercase">Profile Photo URL</label>
-            <div className="relative">
-              <Camera className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+          <div className="flex-1 w-full space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                Upload Photo from Device Files
+              </label>
               <input
-                type="url"
-                value={profilePhoto}
-                onChange={(e) => setProfilePhoto(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
-                className="w-full pl-10 pr-4 py-2 rounded-xl glass-input text-xs text-white"
+                id="profile-file-input"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      if (reader.result) {
+                        setProfilePhoto(reader.result as string);
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                className="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-500 file:text-white hover:file:bg-sky-400 cursor-pointer"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">
+                Or Image URL
+              </label>
+              <div className="relative">
+                <Camera className="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
+                <input
+                  type="url"
+                  value={profilePhoto}
+                  onChange={(e) => setProfilePhoto(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full pl-10 pr-4 py-2 rounded-xl glass-input text-xs text-white"
+                />
+              </div>
             </div>
           </div>
         </div>
