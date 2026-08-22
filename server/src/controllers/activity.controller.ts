@@ -7,7 +7,7 @@ export const getActivities = async (req: Request, res: Response) => {
 
     const whereClause: any = {};
 
-    if (cityId && typeof cityId === 'string') {
+    if (cityId && typeof cityId === 'string' && cityId !== 'all') {
       whereClause.cityId = cityId;
     }
 
@@ -19,6 +19,7 @@ export const getActivities = async (req: Request, res: Response) => {
       whereClause.OR = [
         { name: { contains: search } },
         { description: { contains: search } },
+        { category: { contains: search } },
       ];
     }
 
@@ -27,15 +28,13 @@ export const getActivities = async (req: Request, res: Response) => {
     }
 
     if (maxDuration) {
-      whereClause.durationMinutes = { lte: parseInt(maxDuration as string, 10) };
+      whereClause.durationMinutes = { lte: parseInt(maxDuration as string) };
     }
 
     const activities = await prisma.activity.findMany({
       where: whereClause,
       include: {
-        city: {
-          select: { id: true, name: true, country: true },
-        },
+        city: true,
       },
       orderBy: { rating: 'desc' },
     });
