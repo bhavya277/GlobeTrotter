@@ -254,8 +254,8 @@ async function runSecurityNegativeHardeningAudit() {
 
   // 15. Expired reset token
   await testCase(15, 'Expired reset token submission', async () => {
-    // Insert expired reset token in DB directly
-    const expiredTokenRaw = 'expired_raw_token_xyz';
+    // 15. Expired reset token
+    const expiredTokenRaw = `expired_raw_token_${Date.now()}`;
     const expiredHash = (await import('crypto')).createHash('sha256').update(expiredTokenRaw).digest('hex');
     await prisma.passwordResetToken.create({
       data: {
@@ -276,7 +276,7 @@ async function runSecurityNegativeHardeningAudit() {
   // 16. Reused reset token
   await testCase(16, 'Reused reset token submission', async () => {
     // Generate valid reset token for User 1
-    const rawToken = 'valid_reused_token_test';
+    const rawToken = `valid_reused_token_${Date.now()}`;
     const tokenHash = (await import('crypto')).createHash('sha256').update(rawToken).digest('hex');
     await prisma.passwordResetToken.create({
       data: {

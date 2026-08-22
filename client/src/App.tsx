@@ -8,6 +8,8 @@ import { Footer } from './components/Footer';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { Dashboard } from './pages/Dashboard';
 import { CreateTrip } from './pages/CreateTrip';
 import { MyTrips } from './pages/MyTrips';
@@ -52,6 +54,8 @@ export const AppContent: React.FC = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/cities" element={<CitySearch />} />
           <Route path="/activities" element={<ActivitySearch />} />
           <Route path="/cities/:id" element={<CityDetail />} />
