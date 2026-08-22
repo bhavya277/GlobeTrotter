@@ -12,6 +12,7 @@ import { Dashboard } from './pages/Dashboard';
 import { CreateTrip } from './pages/CreateTrip';
 import { MyTrips } from './pages/MyTrips';
 import { ItineraryBuilder } from './pages/ItineraryBuilder';
+import { ItineraryView } from './pages/ItineraryView';
 import { TripBudget } from './pages/TripBudget';
 import { TripCalendar } from './pages/TripCalendar';
 import { PublicTripView } from './pages/PublicTripView';
@@ -83,6 +84,14 @@ export const AppContent: React.FC = () => {
             element={
               <ProtectedRoute>
                 <ItineraryBuilder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/trip/:id/itinerary"
+            element={
+              <ProtectedRoute>
+                <ItineraryView />
               </ProtectedRoute>
             }
           />
