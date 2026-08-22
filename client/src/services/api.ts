@@ -60,6 +60,14 @@ export const api = {
       });
       return handleResponse<{ message: string }>(res);
     },
+    deleteAccount: async (confirmText: string) => {
+      const res = await fetch(`${API_BASE}/users/account`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ confirmText }),
+      });
+      return handleResponse<{ message: string }>(res);
+    },
   },
 
   // City Catalog APIs
