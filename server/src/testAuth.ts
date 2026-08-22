@@ -34,7 +34,7 @@ async function runAuthTestSuite() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'User Alpha', email: emailA, password: passwordA }),
     });
-    const data = await res.json();
+    const data: any = await res.json();
     if (res.status === 201 && data.token && data.user && data.user.passwordHash === undefined) {
       userAToken = data.token;
       userAId = data.user.id;
@@ -50,7 +50,7 @@ async function runAuthTestSuite() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'User Alpha Copy', email: emailA, password: passwordA }),
     });
-    const data = await res.json();
+    const data : any = await res.json();
     return res.status === 400 && data.error.includes('already exists');
   });
 
@@ -81,7 +81,7 @@ async function runAuthTestSuite() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: emailA, password: 'WrongPassword999' }),
     });
-    const data = await res.json();
+    const data : any = await res.json();
     return res.status === 401 && data.error === 'Invalid email or password';
   });
 
@@ -92,7 +92,7 @@ async function runAuthTestSuite() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'ghost_user_does_not_exist@example.com', password: 'somepassword' }),
     });
-    const data = await res.json();
+    const data : any = await res.json();
     return res.status === 401 && data.error === 'Invalid email or password';
   });
 
@@ -107,7 +107,7 @@ async function runAuthTestSuite() {
     const res = await fetch(`${API_BASE}/auth/me`, {
       headers: { Authorization: `Bearer ${userAToken}` },
     });
-    const data = await res.json();
+    const data : any = await res.json();
     return res.status === 200 && data.user.email === emailA;
   });
 
@@ -131,7 +131,7 @@ async function runAuthTestSuite() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'User Beta', email: emailB, password: 'securePassword123' }),
     });
-    const dataB = await resB.json();
+    const dataB: any = await resB.json();
     userBToken = dataB.token;
 
     // User A creates a PRIVATE trip
@@ -145,7 +145,7 @@ async function runAuthTestSuite() {
         visibility: 'PRIVATE',
       }),
     });
-    const tripData = await tripRes.json();
+    const tripData: any = await tripRes.json();
     const privateTripId = tripData.trip.id;
 
     // User B attempts to access User A's private trip
@@ -164,7 +164,7 @@ async function runAuthTestSuite() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: emailA }),
     });
-    const forgotData = await forgotRes.json();
+    const forgotData: any = await forgotRes.json();
     const resetToken = forgotData.resetToken;
 
     if (!resetToken) return false;
