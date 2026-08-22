@@ -144,10 +144,10 @@ export const Profile: React.FC = () => {
                 onChange={(e) => setDefaultCurrency(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl glass-input text-xs text-white bg-slate-900"
               >
+                <option value="INR">INR (₹)</option>
                 <option value="USD">USD ($)</option>
                 <option value="EUR">EUR (€)</option>
                 <option value="GBP">GBP (£)</option>
-                <option value="JPY">JPY (¥)</option>
               </select>
             </div>
 

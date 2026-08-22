@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { Trip, TripStop, Activity, TripActivity } from '../types';
+import { Trip, TripStop, Activity, TripActivity, City } from '../types';
 import {
   Calendar,
   Clock,
@@ -11,14 +11,16 @@ import {
   Circle,
   MapPin,
   DollarSign,
-  Share2,
   BarChart3,
   Layers,
   Sparkles,
   ArrowLeft,
   Search,
-  ChevronRight,
-  Filter,
+  ChevronUp,
+  ChevronDown,
+  Edit2,
+  X,
+  AlertCircle,
 } from 'lucide-react';
 
 export const ItineraryBuilder: React.FC = () => {
@@ -28,17 +30,30 @@ export const ItineraryBuilder: React.FC = () => {
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
   const [activeDateStr, setActiveDateStr] = useState<string>('');
 
+  // Add City Stop Modal
+  const [isAddStopModalOpen, setIsAddStopModalOpen] = useState(false);
+  const [availableCities, setAvailableCities] = useState<City[]>([]);
+  const [selectedCityId, setSelectedCityId] = useState('');
+  const [newStopStartDate, setNewStopStartDate] = useState('');
+  const [newStopEndDate, setNewStopEndDate] = useState('');
+  const [stopError, setStopError] = useState('');
+
+  // Edit City Stop Dates Modal
+  const [editStopTarget, setEditStopTarget] = useState<TripStop | null>(null);
+  const [editStopStartDate, setEditStopStartDate] = useState('');
+  const [editStopEndDate, setEditStopEndDate] = useState('');
+  const [editStopNotes, setEditStopNotes] = useState('');
+
   // Add Activity Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [cityActivities, setCityActivities] = useState<Activity[]>([]);
   const [activitySearch, setActivitySearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   // Custom Activity State
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customCategory, setCustomCategory] = useState('Sightseeing');
-  const [customCost, setCustomCost] = useState<number>(20);
+  const [customCost, setCustomCost] = useState<number>(500);
   const [startTime, setStartTime] = useState('10:00');
   const [endTime, setEndTime] = useState('12:00');
   const [notes, setNotes] = useState('');
@@ -50,7 +65,7 @@ export const ItineraryBuilder: React.FC = () => {
       setTrip(res.trip);
 
       if (res.trip.stops && res.trip.stops.length > 0) {
-        if (!activeStopId) {
+        if (!activeStopId || !res.trip.stops.some((s) => s.id === activeStopId)) {
           setActiveStopId(res.trip.stops[0].id);
           setActiveDateStr(new Date(res.trip.stops[0].startDate).toISOString().split('T')[0]);
         }
@@ -64,6 +79,10 @@ export const ItineraryBuilder: React.FC = () => {
 
   useEffect(() => {
     fetchTripDetails();
+    api.cities.getAll().then((res) => {
+      setAvailableCities(res.cities);
+      if (res.cities.length > 0) setSelectedCityId(res.cities[0].id);
+    });
   }, [id]);
 
   const activeStop = trip?.stops?.find((s) => s.id === activeStopId);
@@ -75,6 +94,92 @@ export const ItineraryBuilder: React.FC = () => {
       });
     }
   }, [activeStopId, activeStop?.cityId]);
+
+  const openAddStopModal = () => {
+    if (!trip) return;
+    setStopError('');
+    setNewStopStartDate(new Date(trip.startDate).toISOString().split('T')[0]);
+    setNewStopEndDate(new Date(trip.endDate).toISOString().split('T')[0]);
+    setIsAddStopModalOpen(true);
+  };
+
+  const handleCreateStop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trip || !selectedCityId) return;
+
+    setStopError('');
+
+    try {
+      await api.trips.addStop(trip.id, {
+        cityId: selectedCityId,
+        startDate: newStopStartDate,
+        endDate: newStopEndDate,
+      });
+
+      setIsAddStopModalOpen(false);
+      fetchTripDetails();
+    } catch (err: any) {
+      setStopError(err.message || 'Failed to add stop');
+    }
+  };
+
+  const handleMoveStop = async (currentIndex: number, direction: 'UP' | 'DOWN') => {
+    if (!trip || !trip.stops) return;
+    const targetIndex = direction === 'UP' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= trip.stops.length) return;
+
+    const newStops = [...trip.stops];
+    const temp = newStops[currentIndex];
+    newStops[currentIndex] = newStops[targetIndex];
+    newStops[targetIndex] = temp;
+
+    const orderedIds = newStops.map((s) => s.id);
+    try {
+      await api.trips.reorderStops(trip.id, orderedIds);
+      fetchTripDetails();
+    } catch (err) {
+      console.error('Failed to reorder stops:', err);
+    }
+  };
+
+  const openEditStopModal = (stop: TripStop) => {
+    setEditStopTarget(stop);
+    setEditStopStartDate(new Date(stop.startDate).toISOString().split('T')[0]);
+    setEditStopEndDate(new Date(stop.endDate).toISOString().split('T')[0]);
+    setEditStopNotes(stop.notes || '');
+    setStopError('');
+  };
+
+  const handleUpdateStop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trip || !editStopTarget) return;
+
+    setStopError('');
+
+    try {
+      await api.trips.updateStop(trip.id, editStopTarget.id, {
+        startDate: editStopStartDate,
+        endDate: editStopEndDate,
+        notes: editStopNotes,
+      });
+      setEditStopTarget(null);
+      fetchTripDetails();
+    } catch (err: any) {
+      setStopError(err.message || 'Failed to update stop dates');
+    }
+  };
+
+  const handleDeleteStop = async (stopId: string) => {
+    if (!trip) return;
+    if (window.confirm('Are you sure you want to remove this city stop from your itinerary?')) {
+      try {
+        await api.trips.deleteStop(trip.id, stopId);
+        fetchTripDetails();
+      } catch (err: any) {
+        alert(err.message || 'Failed to remove stop');
+      }
+    }
+  };
 
   const handleAddCatalogActivity = async (activity: Activity) => {
     if (!activeStopId || !activeDateStr) return;
@@ -138,19 +243,14 @@ export const ItineraryBuilder: React.FC = () => {
   };
 
   if (loading || !trip) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-400">
-        Loading itinerary builder...
-      </div>
-    );
+    return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-400">Loading itinerary builder...</div>;
   }
 
-  // Filter activities for current active stop
   const scheduledActivities = activeStop?.tripActivities || [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Top Header & Breadcrumbs */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 glass-panel p-6 rounded-3xl border border-slate-800">
         <div className="space-y-1">
           <div className="flex items-center space-x-2 text-xs text-sky-400 font-semibold">
@@ -160,56 +260,102 @@ export const ItineraryBuilder: React.FC = () => {
             <span>/</span>
             <span className="text-slate-400">{trip.name}</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-white">{trip.name} — Itinerary Builder</h1>
+          <h1 className="text-2xl font-extrabold text-white">{trip.name} — Multi-City Itinerary Builder</h1>
           <p className="text-xs text-slate-400">
-            📅 {new Date(trip.startDate).toLocaleDateString()} to {new Date(trip.endDate).toLocaleDateString()} • {trip.stops?.length || 0} Cities
+            📅 {new Date(trip.startDate).toLocaleDateString()} to {new Date(trip.endDate).toLocaleDateString()} • {trip.stops?.length || 0} Ordered Cities • Budget: {trip.currency === 'INR' ? '₹' : '$'}{trip.totalBudget?.toLocaleString()} {trip.currency}
           </p>
         </div>
 
         <div className="flex items-center space-x-3">
+          <button
+            onClick={openAddStopModal}
+            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-md shadow-emerald-500/20"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Add City Stop</span>
+          </button>
+
           <Link
             to={`/trip/${trip.id}/budget`}
             className="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700"
           >
             <BarChart3 className="w-4 h-4 text-emerald-400" />
-            <span>Budget Breakdown</span>
-          </Link>
-
-          <Link
-            to={`/trip/${trip.id}/calendar`}
-            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700"
-          >
-            <Calendar className="w-4 h-4 text-indigo-400" />
-            <span>Timeline</span>
+            <span>Budget</span>
           </Link>
         </div>
       </div>
 
-      {/* City Stops Tabs Row */}
-      <div className="flex items-center space-x-3 overflow-x-auto pb-2 scrollbar-none">
-        {trip.stops?.map((stop, idx) => {
-          const isActive = stop.id === activeStopId;
-          return (
-            <button
-              key={stop.id}
-              onClick={() => {
-                setActiveStopId(stop.id);
-                setActiveDateStr(new Date(stop.startDate).toISOString().split('T')[0]);
-              }}
-              className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center space-x-2 border ${
-                isActive
-                  ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white border-sky-400 shadow-lg shadow-sky-500/20'
-                  : 'glass-card text-slate-300 hover:bg-slate-800 border-slate-800'
-              }`}
-            >
-              <MapPin className={`w-4 h-4 ${isActive ? 'text-white' : 'text-sky-400'}`} />
-              <span>Stop {idx + 1}: {stop.city.name}</span>
-              <span className="text-[10px] opacity-75">
-                ({new Date(stop.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})
-              </span>
-            </button>
-          );
-        })}
+      {/* Multi-City Stop Selector & Reordering Bar */}
+      <div className="glass-panel p-4 rounded-3xl border border-slate-800 space-y-3">
+        <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+          <span className="flex items-center gap-1.5"><Layers className="w-4 h-4 text-sky-400" /> Ordered Multi-City Itinerary Stops ({trip.stops?.length || 0})</span>
+          <span className="text-slate-500 text-[11px]">Reorder or edit dates for each city stop</span>
+        </div>
+
+        <div className="flex items-center space-x-3 overflow-x-auto pb-2 scrollbar-none">
+          {trip.stops?.map((stop, idx) => {
+            const isActive = stop.id === activeStopId;
+            return (
+              <div
+                key={stop.id}
+                className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center space-x-3 border ${
+                  isActive
+                    ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white border-sky-400 shadow-lg shadow-sky-500/20'
+                    : 'glass-card text-slate-300 hover:bg-slate-800 border-slate-800'
+                }`}
+              >
+                <div
+                  onClick={() => {
+                    setActiveStopId(stop.id);
+                    setActiveDateStr(new Date(stop.startDate).toISOString().split('T')[0]);
+                  }}
+                  className="cursor-pointer flex items-center space-x-2"
+                >
+                  <MapPin className={`w-4 h-4 ${isActive ? 'text-white' : 'text-sky-400'}`} />
+                  <div>
+                    <span>Stop {idx + 1}: {stop.city.name}</span>
+                    <span className="block text-[10px] opacity-75 font-normal">
+                      {new Date(stop.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {new Date(stop.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-1 pl-2 border-l border-slate-700/60">
+                  <button
+                    disabled={idx === 0}
+                    onClick={() => handleMoveStop(idx, 'UP')}
+                    className="p-1 text-slate-400 hover:text-white disabled:opacity-30"
+                    title="Move stop earlier"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    disabled={idx === (trip.stops?.length || 1) - 1}
+                    onClick={() => handleMoveStop(idx, 'DOWN')}
+                    className="p-1 text-slate-400 hover:text-white disabled:opacity-30"
+                    title="Move stop later"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => openEditStopModal(stop)}
+                    className="p-1 text-slate-400 hover:text-sky-300"
+                    title="Edit stop dates"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteStop(stop.id)}
+                    className="p-1 text-slate-400 hover:text-rose-400"
+                    title="Remove city stop"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Main Board Layout */}
@@ -225,7 +371,7 @@ export const ItineraryBuilder: React.FC = () => {
                 <div>
                   <h3 className="text-base font-bold text-white">{activeStop.city.name}, {activeStop.city.country}</h3>
                   <p className="text-xs text-slate-400">
-                    {scheduledActivities.length} Scheduled Activities
+                    {scheduledActivities.length} Scheduled Activities • Stop Dates: {new Date(activeStop.startDate).toLocaleDateString()} to {new Date(activeStop.endDate).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -244,9 +390,9 @@ export const ItineraryBuilder: React.FC = () => {
                 <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
                   <Layers className="w-6 h-6" />
                 </div>
-                <h4 className="text-base font-bold text-white">No activities scheduled for this stop</h4>
+                <h4 className="text-base font-bold text-white">No activities scheduled for {activeStop.city.name}</h4>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Browse city attractions or create your custom scheduled events.
+                  Browse city attractions or add custom events for this stop.
                 </p>
                 <button
                   onClick={() => setIsAddModalOpen(true)}
@@ -291,7 +437,7 @@ export const ItineraryBuilder: React.FC = () => {
                             {title}
                           </h4>
                           <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                            ${cost}
+                            {trip.currency === 'INR' ? '₹' : '$'}{cost.toLocaleString()}
                           </span>
                         </div>
 
@@ -325,25 +471,167 @@ export const ItineraryBuilder: React.FC = () => {
             )}
           </div>
 
-          {/* Right Panel: City Info & Activity Highlights */}
+          {/* Right Panel: City Info */}
           <div className="space-y-6">
             <div className="glass-panel p-5 rounded-3xl space-y-4 border border-slate-800">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" /> {activeStop.city.name} Highlights
+                <Sparkles className="w-4 h-4 text-amber-400" /> {activeStop.city.name} Overview
               </h3>
-              <p className="text-xs text-slate-400">
-                {activeStop.city.description}
-              </p>
+              <p className="text-xs text-slate-400">{activeStop.city.description}</p>
               <div className="flex items-center justify-between text-xs text-slate-300 pt-2 border-t border-slate-800">
-                <span>Cost Level: ${'$$$$$'.slice(0, Math.round(activeStop.city.costIndex))}</span>
+                <span>Cost Index: {'₹₹₹₹₹'.slice(0, Math.round(activeStop.city.costIndex))}</span>
                 <span>Rating: ★ {activeStop.city.popularity}</span>
               </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="glass-panel p-8 text-center text-slate-400">
-          No stop selected.
+        <div className="glass-panel p-8 text-center text-slate-400">No stop selected.</div>
+      )}
+
+      {/* Add City Stop Modal */}
+      {isAddStopModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel p-6 rounded-3xl max-w-md w-full space-y-4 border border-slate-800 relative">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Plus className="w-5 h-5 text-sky-400" /> Add City Stop to Itinerary
+              </h3>
+              <button onClick={() => setIsAddStopModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {stopError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                ⚠️ {stopError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateStop} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Select City *</label>
+                <select
+                  value={selectedCityId}
+                  onChange={(e) => setSelectedCityId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-white bg-slate-900"
+                >
+                  {availableCities.map((city) => (
+                    <option key={city.id} value={city.id}>
+                      {city.name}, {city.country}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Arrival Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={newStopStartDate}
+                    onChange={(e) => setNewStopStartDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl glass-input text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Departure Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={newStopEndDate}
+                    onChange={(e) => setNewStopEndDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl glass-input text-xs text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStopModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-sky-500 hover:bg-sky-400">
+                  Add Stop
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit City Stop Modal */}
+      {editStopTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel p-6 rounded-3xl max-w-md w-full space-y-4 border border-slate-800 relative">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-sky-400" /> Edit Stop Dates ({editStopTarget.city.name})
+              </h3>
+              <button onClick={() => setEditStopTarget(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {stopError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                ⚠️ {stopError}
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateStop} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Arrival Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={editStopStartDate}
+                    onChange={(e) => setEditStopStartDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl glass-input text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Departure Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={editStopEndDate}
+                    onChange={(e) => setEditStopEndDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl glass-input text-xs text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Stop Notes</label>
+                <textarea
+                  rows={2}
+                  value={editStopNotes}
+                  onChange={(e) => setEditStopNotes(e.target.value)}
+                  placeholder="Hotel reservations, transport details..."
+                  className="w-full px-3 py-2 rounded-xl glass-input text-xs text-white resize-none"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setEditStopTarget(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-sky-500 hover:bg-sky-400">
+                  Save Stop Dates
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -353,7 +641,7 @@ export const ItineraryBuilder: React.FC = () => {
           <div className="glass-panel p-6 rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto space-y-5 border border-slate-800">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Plus className="w-5 h-5 text-sky-400" /> Add Activity to Itinerary
+                <Plus className="w-5 h-5 text-sky-400" /> Add Activity to {activeStop?.city.name}
               </h3>
               <div className="flex items-center space-x-2 text-xs">
                 <button
@@ -401,7 +689,7 @@ export const ItineraryBuilder: React.FC = () => {
                           <h4 className="text-sm font-bold text-white truncate">{activity.name}</h4>
                           <p className="text-xs text-slate-400 line-clamp-1">{activity.description}</p>
                           <span className="text-[11px] font-semibold text-emerald-400">
-                            Est. ${activity.estimatedCost} • {activity.durationMinutes} mins
+                            Est. {trip.currency === 'INR' ? '₹' : '$'}{activity.estimatedCost} • {activity.durationMinutes} mins
                           </span>
                         </div>
                         <button
@@ -425,7 +713,7 @@ export const ItineraryBuilder: React.FC = () => {
                     required
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
-                    placeholder="e.g. Sunset cocktails at rooftop lounge"
+                    placeholder="e.g. Sunset dinner at harbor viewpoint"
                     className="w-full px-3 py-2 rounded-xl glass-input text-xs text-white"
                   />
                 </div>
@@ -475,7 +763,7 @@ export const ItineraryBuilder: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                      Estimated Cost ($)
+                      Estimated Cost ({trip.currency === 'INR' ? '₹' : '$'})
                     </label>
                     <input
                       type="number"
@@ -485,19 +773,6 @@ export const ItineraryBuilder: React.FC = () => {
                       className="w-full px-3 py-2 rounded-xl glass-input text-xs text-white"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Ticket reservation codes, addresses..."
-                    className="w-full px-3 py-2 rounded-xl glass-input text-xs text-white resize-none"
-                  />
                 </div>
 
                 <div className="pt-2 flex justify-end gap-2">

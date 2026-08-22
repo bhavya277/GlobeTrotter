@@ -10,7 +10,7 @@ const createTripSchema = z.object({
   endDate: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid end date'),
   coverPhoto: z.string().optional(),
   visibility: z.enum(['PRIVATE', 'PUBLIC', 'UNLISTED']).default('PRIVATE'),
-  totalBudget: z.number().nonnegative().optional().default(0),
+  totalBudget: z.number().nonnegative('Total budget must be non-negative').optional().default(0),
   currency: z.string().default('USD'),
   cityIds: z.array(z.string()).optional(),
 });
@@ -22,13 +22,13 @@ const updateTripSchema = z.object({
   endDate: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid end date').optional(),
   coverPhoto: z.string().optional(),
   visibility: z.enum(['PRIVATE', 'PUBLIC', 'UNLISTED']).optional(),
-  totalBudget: z.number().nonnegative().optional(),
+  totalBudget: z.number().nonnegative('Total budget must be non-negative').optional(),
   currency: z.string().optional(),
 });
 
 export const getMyTrips = async (req: Request, res: Response) => {
   try {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
 
     const trips = await prisma.trip.findMany({
       where: { userId: req.user.userId },
@@ -86,12 +86,12 @@ export const getTripById = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Trip not found' });
     }
 
-    // Security Check: Rule 3
+    // Security Check: Rule 3 (User Isolation)
     const isOwner = currentUserId === trip.userId;
     const isPublic = trip.visibility === 'PUBLIC';
 
     if (!isOwner && !isPublic) {
-      return res.status(403).json({ error: 'Access denied. This trip is private.' });
+      return res.status(403).json({ error: 'Access denied. You do not have permission to view this private trip.' });
     }
 
     res.json({ trip, isOwner });
@@ -128,10 +128,9 @@ export const getTripByShareToken = async (req: Request, res: Response) => {
     });
 
     if (!trip) {
-      return res.status(404).json({ error: 'Shared itinerary not found or invalid link.' });
+      return res.status(404).json({ error: 'Shared itinerary not found or link has expired.' });
     }
 
-    // If visibility is PRIVATE and accessed by token, check if token matches
     res.json({ trip, isShared: true });
   } catch (error) {
     console.error('Get shared trip error:', error);
@@ -141,23 +140,27 @@ export const getTripByShareToken = async (req: Request, res: Response) => {
 
 export const createTrip = async (req: Request, res: Response) => {
   try {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
 
     const validated = createTripSchema.parse(req.body);
-    const shareToken = crypto.randomBytes(16).toString('hex');
 
     const start = new Date(validated.startDate);
     const end = new Date(validated.endDate);
 
-    // Default cover photo if none provided
+    // Validation: End Date cannot be before Start Date
+    if (end < start) {
+      return res.status(400).json({ error: 'End date cannot be before start date.' });
+    }
+
+    const shareToken = crypto.randomBytes(16).toString('hex');
     const defaultCover = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=80';
 
     const trip = await prisma.$transaction(async (tx) => {
       const createdTrip = await tx.trip.create({
         data: {
           userId: req.user!.userId,
-          name: validated.name,
-          description: validated.description,
+          name: validated.name.trim(),
+          description: validated.description?.trim(),
           startDate: start,
           endDate: end,
           coverPhoto: validated.coverPhoto || defaultCover,
@@ -168,7 +171,7 @@ export const createTrip = async (req: Request, res: Response) => {
         },
       });
 
-      // If cityIds are provided, create initial TripStops automatically
+      // Automatically create stops if cityIds provided
       if (validated.cityIds && validated.cityIds.length > 0) {
         const totalCities = validated.cityIds.length;
         const totalDurationDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
@@ -217,26 +220,39 @@ export const createTrip = async (req: Request, res: Response) => {
 
 export const updateTrip = async (req: Request, res: Response) => {
   try {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
     const { id } = req.params;
 
     const existingTrip = await prisma.trip.findUnique({ where: { id } });
     if (!existingTrip) return res.status(404).json({ error: 'Trip not found' });
 
-    // Security Check: Ownership verification
+    // Security Check: Ownership verification (User Isolation)
     if (existingTrip.userId !== req.user.userId) {
       return res.status(403).json({ error: 'Forbidden. You do not own this trip.' });
     }
 
     const validated = updateTripSchema.parse(req.body);
 
-    const dataToUpdate: any = { ...validated };
-    if (validated.startDate) dataToUpdate.startDate = new Date(validated.startDate);
-    if (validated.endDate) dataToUpdate.endDate = new Date(validated.endDate);
+    const start = validated.startDate ? new Date(validated.startDate) : existingTrip.startDate;
+    const end = validated.endDate ? new Date(validated.endDate) : existingTrip.endDate;
+
+    // Validation: End Date cannot be before Start Date
+    if (end < start) {
+      return res.status(400).json({ error: 'End date cannot be before start date.' });
+    }
 
     const updatedTrip = await prisma.trip.update({
       where: { id },
-      data: dataToUpdate,
+      data: {
+        ...(validated.name && { name: validated.name.trim() }),
+        ...(validated.description !== undefined && { description: validated.description.trim() }),
+        ...(validated.startDate && { startDate: start }),
+        ...(validated.endDate && { endDate: end }),
+        ...(validated.coverPhoto !== undefined && { coverPhoto: validated.coverPhoto }),
+        ...(validated.visibility && { visibility: validated.visibility }),
+        ...(validated.totalBudget !== undefined && { totalBudget: validated.totalBudget }),
+        ...(validated.currency && { currency: validated.currency }),
+      },
       include: {
         stops: {
           include: { city: true },
@@ -256,13 +272,13 @@ export const updateTrip = async (req: Request, res: Response) => {
 
 export const deleteTrip = async (req: Request, res: Response) => {
   try {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
     const { id } = req.params;
 
     const existingTrip = await prisma.trip.findUnique({ where: { id } });
     if (!existingTrip) return res.status(404).json({ error: 'Trip not found' });
 
-    // Security Check: Ownership verification
+    // Security Check: Ownership verification (User Isolation)
     if (existingTrip.userId !== req.user.userId) {
       return res.status(403).json({ error: 'Forbidden. You do not own this trip.' });
     }

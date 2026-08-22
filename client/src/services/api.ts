@@ -64,7 +64,7 @@ export const api = {
 
   // City Catalog APIs
   cities: {
-    getAll: async (params?: { search?: string; region?: string; minCost?: number; maxCost?: number; sortBy?: string }) => {
+    getAll: async (params?: { search?: string; country?: string; region?: string; minPopularity?: number; maxCost?: number; sortBy?: string }) => {
       const query = new URLSearchParams(params as any || {}).toString();
       const res = await fetch(`${API_BASE}/cities?${query}`);
       return handleResponse<{ cities: City[] }>(res);
@@ -153,7 +153,7 @@ export const api = {
       });
       return handleResponse<{ message: string }>(res);
     },
-    // Stops
+    // Multi-City Stops Management
     addStop: async (tripId: string, data: { cityId: string; startDate: string; endDate: string; notes?: string }) => {
       const res = await fetch(`${API_BASE}/trips/${tripId}/stops`, {
         method: 'POST',
@@ -161,6 +161,22 @@ export const api = {
         body: JSON.stringify(data),
       });
       return handleResponse<{ stop: TripStop }>(res);
+    },
+    updateStop: async (tripId: string, stopId: string, data: { startDate?: string; endDate?: string; notes?: string; order?: number }) => {
+      const res = await fetch(`${API_BASE}/trips/${tripId}/stops/${stopId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify(data),
+      });
+      return handleResponse<{ stop: TripStop }>(res);
+    },
+    reorderStops: async (tripId: string, orderedStopIds: string[]) => {
+      const res = await fetch(`${API_BASE}/trips/${tripId}/stops/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ orderedStopIds }),
+      });
+      return handleResponse<{ stops: TripStop[] }>(res);
     },
     deleteStop: async (tripId: string, stopId: string) => {
       const res = await fetch(`${API_BASE}/trips/${tripId}/stops/${stopId}`, {

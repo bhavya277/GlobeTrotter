@@ -3,7 +3,7 @@ import { prisma } from '../db.js';
 
 export const getCities = async (req: Request, res: Response) => {
   try {
-    const { search, region, minCost, maxCost, sortBy } = req.query;
+    const { search, country, region, minPopularity, maxCost, sortBy } = req.query;
 
     const whereClause: any = {};
 
@@ -15,21 +15,27 @@ export const getCities = async (req: Request, res: Response) => {
       ];
     }
 
+    if (country && typeof country === 'string' && country !== 'all') {
+      whereClause.country = { equals: country };
+    }
+
     if (region && typeof region === 'string' && region !== 'all') {
       whereClause.region = { equals: region };
     }
 
-    if (minCost || maxCost) {
-      whereClause.costIndex = {
-        gte: minCost ? parseFloat(minCost as string) : 1,
-        lte: maxCost ? parseFloat(maxCost as string) : 5,
-      };
+    if (minPopularity) {
+      whereClause.popularity = { gte: parseFloat(minPopularity as string) };
+    }
+
+    if (maxCost) {
+      whereClause.costIndex = { lte: parseFloat(maxCost as string) };
     }
 
     let orderBy: any = { popularity: 'desc' };
     if (sortBy === 'cost_asc') orderBy = { costIndex: 'asc' };
     if (sortBy === 'cost_desc') orderBy = { costIndex: 'desc' };
     if (sortBy === 'name_asc') orderBy = { name: 'asc' };
+    if (sortBy === 'popularity') orderBy = { popularity: 'desc' };
 
     const cities = await prisma.city.findMany({
       where: whereClause,

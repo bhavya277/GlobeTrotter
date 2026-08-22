@@ -218,11 +218,11 @@ export const CreateTrip: React.FC = () => {
                 onChange={(e) => setCurrency(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl glass-input text-white text-sm bg-slate-900"
               >
+                <option value="INR">INR (₹)</option>
                 <option value="USD">USD ($)</option>
                 <option value="EUR">EUR (€)</option>
                 <option value="GBP">GBP (£)</option>
                 <option value="JPY">JPY (¥)</option>
-                <option value="AUD">AUD ($)</option>
               </select>
             </div>
           </div>
