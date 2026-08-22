@@ -35,12 +35,13 @@ export const getTripExpenseSummary = async (req: Request, res: Response) => {
     });
 
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
-    if (trip.userId !== req.user.userId && trip.visibility !== 'PUBLIC') {
+    const isOwner = !!(req.user && trip.userId === req.user.userId);
+    if (!isOwner && trip.visibility !== 'PUBLIC') {
       return res.status(403).json({ error: 'Forbidden. Access denied to trip expenses.' });
     }
 
-    // 1. Calculate Logged Expenses
-    const loggedExpenses = trip.expenses;
+    // 1. Calculate Logged Expenses (ONLY for trip owner!)
+    const loggedExpenses = isOwner ? trip.expenses : [];
 
     // 2. Calculate Scheduled Activity Costs from TripActivities
     let activityTotalCost = 0;
