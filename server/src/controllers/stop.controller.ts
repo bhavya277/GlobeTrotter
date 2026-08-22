@@ -41,35 +41,52 @@ export const addStop = async (req: Request, res: Response) => {
     const stopStart = new Date(validated.startDate);
     const stopEnd = new Date(validated.endDate);
 
-    // Validation 1: Stop start <= stop end
+    // Stop end date cannot be before stop start date
     if (stopEnd < stopStart) {
-      return res.status(400).json({ error: 'Stop end date cannot be before stop start date.' });
+      return res.status(400).json({ error: 'Stop departure date cannot be before arrival date.' });
     }
 
-    // Validation 2: Stop dates within overall parent trip dates
-    const tripStart = new Date(trip.startDate);
-    const tripEnd = new Date(trip.endDate);
+    // Dynamic Trip Dates Expansion: Automatically adjust trip dates to fit user selected stop dates
+    let newTripStart = new Date(trip.startDate);
+    let newTripEnd = new Date(trip.endDate);
+    let tripNeedsUpdate = false;
 
-    if (stopStart < tripStart || stopEnd > tripEnd) {
-      return res.status(400).json({
-        error: `Stop dates (${stopStart.toLocaleDateString()} - ${stopEnd.toLocaleDateString()}) must be within the overall trip dates (${tripStart.toLocaleDateString()} - ${tripEnd.toLocaleDateString()}).`,
+    if (stopStart < newTripStart) {
+      newTripStart = stopStart;
+      tripNeedsUpdate = true;
+    }
+
+    if (stopEnd > newTripEnd) {
+      newTripEnd = stopEnd;
+      tripNeedsUpdate = true;
+    }
+
+    const stop = await prisma.$transaction(async (tx) => {
+      if (tripNeedsUpdate) {
+        await tx.trip.update({
+          where: { id: tripId },
+          data: {
+            startDate: newTripStart,
+            endDate: newTripEnd,
+          },
+        });
+      }
+
+      const existingStopsCount = await tx.tripStop.count({ where: { tripId } });
+
+      return await tx.tripStop.create({
+        data: {
+          tripId,
+          cityId: validated.cityId,
+          startDate: stopStart,
+          endDate: stopEnd,
+          order: validated.order ?? (existingStopsCount + 1),
+          notes: validated.notes?.trim() || null,
+        },
+        include: {
+          city: true,
+        },
       });
-    }
-
-    const existingStopsCount = await prisma.tripStop.count({ where: { tripId } });
-
-    const stop = await prisma.tripStop.create({
-      data: {
-        tripId,
-        cityId: validated.cityId,
-        startDate: stopStart,
-        endDate: stopEnd,
-        order: validated.order ?? (existingStopsCount + 1),
-        notes: validated.notes?.trim() || null,
-      },
-      include: {
-        city: true,
-      },
     });
 
     res.status(201).json({ stop });
@@ -103,32 +120,48 @@ export const updateStop = async (req: Request, res: Response) => {
     const stopStart = validated.startDate ? new Date(validated.startDate) : existingStop.startDate;
     const stopEnd = validated.endDate ? new Date(validated.endDate) : existingStop.endDate;
 
-    // Validation: stopEnd >= stopStart
     if (stopEnd < stopStart) {
-      return res.status(400).json({ error: 'Stop end date cannot be before stop start date.' });
+      return res.status(400).json({ error: 'Stop departure date cannot be before arrival date.' });
     }
 
-    // Validation: Stop dates within parent trip bounds
-    const tripStart = new Date(trip.startDate);
-    const tripEnd = new Date(trip.endDate);
+    // Dynamic Trip Dates Expansion: Automatically adjust trip dates to fit user selected stop dates
+    let newTripStart = new Date(trip.startDate);
+    let newTripEnd = new Date(trip.endDate);
+    let tripNeedsUpdate = false;
 
-    if (stopStart < tripStart || stopEnd > tripEnd) {
-      return res.status(400).json({
-        error: `Stop dates must be within overall trip dates (${tripStart.toLocaleDateString()} - ${tripEnd.toLocaleDateString()}).`,
+    if (stopStart < newTripStart) {
+      newTripStart = stopStart;
+      tripNeedsUpdate = true;
+    }
+
+    if (stopEnd > newTripEnd) {
+      newTripEnd = stopEnd;
+      tripNeedsUpdate = true;
+    }
+
+    const updatedStop = await prisma.$transaction(async (tx) => {
+      if (tripNeedsUpdate) {
+        await tx.trip.update({
+          where: { id: tripId },
+          data: {
+            startDate: newTripStart,
+            endDate: newTripEnd,
+          },
+        });
+      }
+
+      return await tx.tripStop.update({
+        where: { id: stopId },
+        data: {
+          ...(validated.startDate && { startDate: stopStart }),
+          ...(validated.endDate && { endDate: stopEnd }),
+          ...(validated.order !== undefined && { order: validated.order }),
+          ...(validated.notes !== undefined && { notes: validated.notes.trim() || null }),
+        },
+        include: {
+          city: true,
+        },
       });
-    }
-
-    const updatedStop = await prisma.tripStop.update({
-      where: { id: stopId },
-      data: {
-        ...(validated.startDate && { startDate: stopStart }),
-        ...(validated.endDate && { endDate: stopEnd }),
-        ...(validated.order !== undefined && { order: validated.order }),
-        ...(validated.notes !== undefined && { notes: validated.notes.trim() || null }),
-      },
-      include: {
-        city: true,
-      },
     });
 
     res.json({ stop: updatedStop });
