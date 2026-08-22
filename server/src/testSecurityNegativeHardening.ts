@@ -28,21 +28,28 @@ async function runSecurityNegativeHardeningAudit() {
   const user1Email = `sec_user1_${Date.now()}@test.com`;
   const user2Email = `sec_user2_${Date.now()}@test.com`;
 
-  const reg1 = await fetch(`${API_BASE}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'Security User 1', email: user1Email, password: 'Password123!' }),
-  });
-  const data1: any = await reg1.json();
-  const token1 = data1.token || data1.accessToken;
+  const passUtil = await import('./utils/password.js');
+  const jwtUtil = await import('./utils/jwt.js');
 
-  const reg2 = await fetch(`${API_BASE}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'Security User 2', email: user2Email, password: 'Password123!' }),
+  const user1 = await prisma.user.create({
+    data: {
+      name: 'Security User 1',
+      email: user1Email,
+      passwordHash: await passUtil.hashPassword('Password123!'),
+    },
   });
-  const data2: any = await reg2.json();
-  const token2 = data2.token || data2.accessToken;
+  const token1 = jwtUtil.generateToken({ userId: user1.id, email: user1.email, role: user1.role });
+  const data1 = { user: user1, token: token1 };
+
+  const user2 = await prisma.user.create({
+    data: {
+      name: 'Security User 2',
+      email: user2Email,
+      passwordHash: await passUtil.hashPassword('Password123!'),
+    },
+  });
+  const token2 = jwtUtil.generateToken({ userId: user2.id, email: user2.email, role: user2.role });
+  const data2 = { user: user2, token: token2 };
 
   // Create User 1 Private Trip
   const trip1Res = await fetch(`${API_BASE}/trips`, {

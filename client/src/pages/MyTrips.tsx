@@ -32,6 +32,7 @@ export const MyTrips: React.FC = () => {
 
   // Modals State
   const [shareModalToken, setShareModalToken] = useState<string | null>(null);
+  const [copiedShareToken, setCopiedShareToken] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [editTarget, setEditTarget] = useState<Trip | null>(null);
 
@@ -475,11 +476,12 @@ export const MyTrips: React.FC = () => {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(`${window.location.origin}/share/${shareModalToken}`);
-                  alert('Public link copied to clipboard!');
+                  setCopiedShareToken(true);
+                  setTimeout(() => setCopiedShareToken(false), 2000);
                 }}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-sky-500 hover:bg-sky-400"
               >
-                Copy Link
+                {copiedShareToken ? 'Copied!' : 'Copy Link'}
               </button>
 
               <a
