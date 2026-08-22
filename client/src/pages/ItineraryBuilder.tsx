@@ -263,7 +263,7 @@ export const ItineraryBuilder: React.FC = () => {
           </div>
           <h1 className="text-2xl font-extrabold text-white">{trip.name} — Multi-City Itinerary Builder</h1>
           <p className="text-xs text-slate-400">
-            📅 {new Date(trip.startDate).toLocaleDateString()} to {new Date(trip.endDate).toLocaleDateString()} • {trip.stops?.length || 0} Ordered Cities • Budget: {trip.currency === 'INR' ? '₹' : '$'}{trip.totalBudget?.toLocaleString()} {trip.currency}
+            📅 {new Date(trip.startDate).toLocaleDateString()} to {new Date(trip.endDate).toLocaleDateString()} • {trip.stops?.length || 0} Ordered Cities • Budget: ₹{trip.totalBudget?.toLocaleString()} INR (₹)
           </p>
         </div>
 

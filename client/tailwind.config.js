@@ -7,27 +7,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#f0f7ff',
-          100: '#e0effe',
-          200: '#bae0fd',
-          300: '#7cc7fb',
-          400: '#36a9f7',
-          500: '#0c8de9',
-          600: '#006ec7',
-          700: '#0158a4',
-          800: '#064b86',
-          900: '#0b3e6f',
-          950: '#072749',
+        navy: {
+          950: '#070c18',
+          900: '#0b132b',
+          850: '#111b38',
+          800: '#1c2541',
+          700: '#2a365c',
         },
-        sunset: {
+        coral: {
           500: '#ff5a5f',
-          600: '#e04347',
+          600: '#ea580c',
+          700: '#c2410c',
         },
-        emeraldCustom: '#10b981',
+        turquoise: {
+          400: '#2dd4bf',
+          500: '#14b8a6',
+        },
+        brand: {
+          500: '#0ea5e9',
+          600: '#0284c7',
+        },
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
       },
     },
   },

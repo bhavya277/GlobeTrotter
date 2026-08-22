@@ -15,7 +15,8 @@ model User {
   profilePhoto     String?
   bio              String?
   language         String             @default("en")
-  defaultCurrency  String             @default("USD")
+  defaultCurrency  String             @default("INR")
+  role             String             @default("USER") // USER, ADMIN
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   trips            Trip[]

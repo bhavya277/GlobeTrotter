@@ -6,6 +6,7 @@ export interface User {
   bio?: string;
   language: string;
   defaultCurrency: string;
+  role?: string;
   createdAt: string;
   updatedAt: string;
 }

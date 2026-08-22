@@ -324,4 +324,45 @@ export const api = {
       }>(res);
     },
   },
+
+  // Admin / Analytics APIs (Phase 12 RBAC)
+  admin: {
+    getStats: async () => {
+      const res = await fetch(`${API_BASE}/admin/stats`, {
+        headers: { ...getAuthHeaders() },
+      });
+      return handleResponse<{
+        stats: {
+          totalUsers: number;
+          totalTrips: number;
+          totalCities: number;
+          totalActivities: number;
+          totalExpenses: number;
+        };
+        popularCities: Array<{ cityName: string; country: string; stopCount: number }>;
+        popularActivities: Array<{ name: string; category: string; scheduledCount: number }>;
+      }>(res);
+    },
+    getUsers: async () => {
+      const res = await fetch(`${API_BASE}/admin/users`, {
+        headers: { ...getAuthHeaders() },
+      });
+      return handleResponse<{ users: any[] }>(res);
+    },
+    updateUserRole: async (userId: string, role: string) => {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ role }),
+      });
+      return handleResponse<{ user: any; message: string }>(res);
+    },
+    deleteUser: async (userId: string) => {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeaders() },
+      });
+      return handleResponse<{ message: string }>(res);
+    },
+  },
 };

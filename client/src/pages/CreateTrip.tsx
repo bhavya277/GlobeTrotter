@@ -1,420 +1,388 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { City } from '../types';
 import {
+  Compass,
   Calendar,
   DollarSign,
-  Globe,
-  MapPin,
-  CheckCircle,
+  Image,
   ArrowRight,
   ArrowLeft,
+  CheckCircle,
+  AlertCircle,
   Sparkles,
-  Search,
+  Globe,
+  MapPin,
   Lock,
-  Eye,
 } from 'lucide-react';
-
-const COVER_IMAGES = [
-  'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=1200&q=80',
-  'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80',
-];
 
 export const CreateTrip: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
 
-  // Form State
+  // Form Fields
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [totalBudget, setTotalBudget] = useState<number>(2000);
-  const [currency, setCurrency] = useState('USD');
-  const [visibility, setVisibility] = useState<'PRIVATE' | 'PUBLIC' | 'UNLISTED'>('PRIVATE');
-  const [selectedCover, setSelectedCover] = useState(COVER_IMAGES[0]);
-
-  // Cities State
-  const [cities, setCities] = useState<City[]>([]);
+  const [totalBudget, setTotalBudget] = useState<number>(50000);
+  const [currency, setCurrency] = useState('INR');
+  const [visibility, setVisibility] = useState<'PRIVATE' | 'PUBLIC'>('PRIVATE');
+  const [coverPhoto, setCoverPhoto] = useState(
+    'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1200&q=80'
+  );
   const [selectedCityIds, setSelectedCityIds] = useState<string[]>([]);
-  const [citySearch, setCitySearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [availableCities, setAvailableCities] = useState<City[]>([]);
+
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Set default dates (today + 14 days)
-    const today = new Date();
-    const future = new Date(today);
-    future.setDate(future.getDate() + 7);
-
-    setStartDate(today.toISOString().split('T')[0]);
-    setEndDate(future.toISOString().split('T')[0]);
-
-    api.cities.getAll().then((res) => setCities(res.cities)).catch(console.error);
+    api.cities.getAll().then((res) => setAvailableCities(res.cities)).catch(console.error);
   }, []);
 
-  const toggleCitySelection = (id: string) => {
-    if (selectedCityIds.includes(id)) {
-      setSelectedCityIds(selectedCityIds.filter((cId) => cId !== id));
+  const toggleCitySelection = (cityId: string) => {
+    if (selectedCityIds.includes(cityId)) {
+      setSelectedCityIds(selectedCityIds.filter((id) => id !== cityId));
     } else {
-      setSelectedCityIds([...selectedCityIds, id]);
+      setSelectedCityIds([...selectedCityIds, cityId]);
     }
   };
 
-  const handleCreate = async () => {
-    if (!name.trim()) {
-      setError('Trip name is required');
-      setStep(1);
-      return;
-    }
-
-    setLoading(true);
+  const handleNextStep = (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
 
+    if (step === 1) {
+      if (!name.trim() || name.trim().length < 2) {
+        setError('Please enter a trip name (at least 2 characters).');
+        return;
+      }
+      setStep(2);
+    } else if (step === 2) {
+      if (!startDate || !endDate) {
+        setError('Please select both start and end dates.');
+        return;
+      }
+      if (new Date(endDate) < new Date(startDate)) {
+        setError('End date cannot be before start date.');
+        return;
+      }
+      setStep(3);
+    } else if (step === 3) {
+      if (totalBudget < 0) {
+        setError('Budget cannot be negative.');
+        return;
+      }
+      setStep(4);
+    }
+  };
+
+  const handleFinalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
     try {
-      const data = await api.trips.create({
-        name,
-        description,
+      const res = await api.trips.create({
+        name: name.trim(),
+        description: description.trim(),
         startDate,
         endDate,
+        coverPhoto,
+        visibility,
         totalBudget,
         currency,
-        visibility,
-        coverPhoto: selectedCover,
         cityIds: selectedCityIds,
       });
 
-      navigate(`/trip/${data.trip.id}/builder`);
+      navigate(`/trip/${res.trip.id}/builder`);
     } catch (err: any) {
-      setError(err.message || 'Failed to create trip');
+      setError(err.message || 'Failed to create trip.');
       setLoading(false);
     }
   };
 
-  const filteredCities = cities.filter(
-    (c) =>
-      c.name.toLowerCase().includes(citySearch.toLowerCase()) ||
-      c.country.toLowerCase().includes(citySearch.toLowerCase())
-  );
-
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-      {/* Wizard Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 mb-3 border border-sky-500/20">
-          <Sparkles className="w-6 h-6" />
-        </div>
-        <h1 className="text-3xl font-extrabold text-white">
-          Create New <span className="gradient-text">Trip</span>
-        </h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Step {step} of 3 — {step === 1 ? 'Trip Details' : step === 2 ? 'Select Destinations' : 'Review & Launch'}
-        </p>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Header & Step Indicator */}
+      <div className="text-center space-y-3">
+        <h1 className="text-3xl font-black text-white">Start Your <span className="gradient-text">New Journey</span></h1>
+        <p className="text-xs text-slate-400">Step-by-step trip creation wizard with automated budget setup.</p>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-slate-800 h-2 rounded-full mt-6 overflow-hidden max-w-md mx-auto">
-          <div
-            className="bg-gradient-to-r from-sky-500 to-indigo-500 h-full transition-all duration-300"
-            style={{ width: `${(step / 3) * 100}%` }}
-          ></div>
+        {/* Wizard Progress Bar */}
+        <div className="flex items-center justify-center space-x-3 pt-4">
+          {[
+            { num: 1, label: 'Journey Name' },
+            { num: 2, label: 'Dates & Cities' },
+            { num: 3, label: 'Budget & Visibility' },
+            { num: 4, label: 'Review & Cover' },
+          ].map((s) => (
+            <div key={s.num} className="flex items-center space-x-2">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${
+                  step === s.num
+                    ? 'bg-sky-500 text-white ring-4 ring-sky-500/20'
+                    : step > s.num
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-navy-800 text-slate-400 border border-white/10'
+                }`}
+              >
+                {step > s.num ? <CheckCircle className="w-4 h-4" /> : s.num}
+              </div>
+              <span className={`text-xs font-bold hidden sm:inline ${step === s.num ? 'text-white' : 'text-slate-500'}`}>
+                {s.label}
+              </span>
+              {s.num < 4 && <span className="text-slate-700 font-bold px-1">/</span>}
+            </div>
+          ))}
         </div>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm">
-          ⚠️ {error}
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center space-x-2">
+          <AlertCircle className="w-5 h-5 shrink-0 text-rose-400" />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Step 1: Basic Information */}
+      {/* Step 1: Name Your Journey */}
       {step === 1 && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl space-y-6 border border-slate-800">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Globe className="w-5 h-5 text-sky-400" /> Basic Trip Details
-          </h2>
+        <form onSubmit={handleNextStep} className="glass-panel p-8 rounded-3xl border border-white/10 space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Compass className="w-5 h-5 text-sky-400" /> Name Your Journey
+            </h2>
+            <p className="text-xs text-slate-400">Give your trip a memorable title (e.g., "Golden Triangle India Expedition").</p>
+          </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Trip Name *
-            </label>
+            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Trip Title *</label>
             <input
               type="text"
               required
+              placeholder="e.g. Royal Rajasthan & Goa Beaches"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl glass-input text-white text-base placeholder-slate-500"
-              placeholder="e.g., Summer European Tour 2026"
+              className="w-full px-4 py-3 rounded-xl glass-input text-sm text-white font-bold"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Description / Notes
-            </label>
+            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Trip Description (Optional)</label>
             <textarea
               rows={3}
+              placeholder="Describe your travel goals, highlights, or group members..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl glass-input text-white text-sm placeholder-slate-500 resize-none"
-              placeholder="What makes this trip special? Add goals, sights, or notes..."
+              className="w-full px-4 py-3 rounded-xl glass-input text-xs text-white resize-none"
             />
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <button
+              type="submit"
+              className="flex items-center space-x-2 px-6 py-3 rounded-xl font-extrabold text-xs text-white bg-sky-500 hover:bg-sky-400 shadow-lg shadow-sky-500/20"
+            >
+              <span>Next: Dates & Cities</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Step 2: Choose Dates & Initial Cities */}
+      {step === 2 && (
+        <form onSubmit={handleNextStep} className="glass-panel p-8 rounded-3xl border border-white/10 space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-turquoise-400" /> Travel Dates & Destination Cities
+            </h2>
+            <p className="text-xs text-slate-400">Set overall start and end dates, and select initial cities to visit.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Start Date *
-              </label>
+              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Start Date *</label>
               <input
                 type="date"
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl glass-input text-white text-sm"
+                className="w-full px-4 py-3 rounded-xl glass-input text-xs text-white"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                End Date *
-              </label>
+              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">End Date *</label>
               <input
                 type="date"
                 required
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl glass-input text-white text-sm"
+                className="w-full px-4 py-3 rounded-xl glass-input text-xs text-white"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Estimated Total Budget
-              </label>
-              <div className="relative">
-                <DollarSign className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
-                <input
-                  type="number"
-                  min="0"
-                  value={totalBudget}
-                  onChange={(e) => setTotalBudget(parseFloat(e.target.value) || 0)}
-                  className="w-full pl-11 pr-4 py-3 rounded-xl glass-input text-white text-sm"
-                />
-              </div>
+          <div className="space-y-2 pt-2">
+            <label className="block text-xs font-bold text-slate-300 uppercase">Select Cities to Include (Optional)</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-48 overflow-y-auto pr-1">
+              {availableCities.map((city) => {
+                const isSelected = selectedCityIds.includes(city.id);
+                return (
+                  <button
+                    type="button"
+                    key={city.id}
+                    onClick={() => toggleCitySelection(city.id)}
+                    className={`p-3 rounded-xl text-left border transition-all flex items-center justify-between ${
+                      isSelected
+                        ? 'bg-sky-500/20 border-sky-500 text-white font-bold'
+                        : 'bg-navy-850 border-white/10 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <div>
+                      <p className="text-xs font-bold">{city.name}</p>
+                      <p className="text-[10px] text-slate-400">{city.country}</p>
+                    </div>
+                    {isSelected && <CheckCircle className="w-4 h-4 text-sky-400" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-4">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+
+            <button
+              type="submit"
+              className="flex items-center space-x-2 px-6 py-3 rounded-xl font-extrabold text-xs text-white bg-sky-500 hover:bg-sky-400 shadow-lg shadow-sky-500/20"
+            >
+              <span>Next: Budget Setup</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Step 3: Budget & Visibility */}
+      {step === 3 && (
+        <form onSubmit={handleNextStep} className="glass-panel p-8 rounded-3xl border border-white/10 space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-coral-500" /> Total Target Budget & Privacy
+            </h2>
+            <p className="text-xs text-slate-400">Set total expected spending cap in Indian Rupee (INR ₹).</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Total Target Budget (INR ₹) *</label>
+              <input
+                type="number"
+                min="0"
+                required
+                value={totalBudget}
+                onChange={(e) => setTotalBudget(parseFloat(e.target.value) || 0)}
+                className="w-full px-4 py-3 rounded-xl glass-input text-sm text-white font-bold"
+              />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Currency
-              </label>
+              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Trip Privacy Visibility</label>
               <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl glass-input text-white text-sm bg-slate-900"
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value as any)}
+                className="w-full px-4 py-3 rounded-xl glass-input text-xs text-white bg-navy-900"
               >
-                <option value="INR">INR (₹)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="JPY">JPY (¥)</option>
+                <option value="PRIVATE">Private (Only Accessible By Me)</option>
+                <option value="PUBLIC">Public (Accessible via Unique Link)</option>
               </select>
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Trip Visibility & Security
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div
-                onClick={() => setVisibility('PRIVATE')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                  visibility === 'PRIVATE'
-                    ? 'bg-sky-500/10 border-sky-500 text-white'
-                    : 'glass-card border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center space-x-2 font-bold text-sm mb-1">
-                  <Lock className="w-4 h-4 text-sky-400" />
-                  <span>Private (Only Me)</span>
-                </div>
-                <p className="text-xs text-slate-400">Strictly protected. Requires login ownership check.</p>
-              </div>
-
-              <div
-                onClick={() => setVisibility('PUBLIC')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                  visibility === 'PUBLIC'
-                    ? 'bg-sky-500/10 border-sky-500 text-white'
-                    : 'glass-card border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center space-x-2 font-bold text-sm mb-1">
-                  <Eye className="w-4 h-4 text-emerald-400" />
-                  <span>Public Shared Link</span>
-                </div>
-                <p className="text-xs text-slate-400">Generates shareable read-only link for friends.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 flex justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                if (!name.trim()) {
-                  setError('Please enter a trip name');
-                  return;
-                }
-                setError('');
-                setStep(2);
-              }}
-              className="flex items-center space-x-2 px-6 py-3 rounded-xl font-bold text-white bg-sky-500 hover:bg-sky-400 transition-colors"
-            >
-              <span>Next: Select Destinations</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: City Destinations Selection */}
-      {step === 2 && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl space-y-6 border border-slate-800">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-emerald-400" /> Select Cities for Trip Stops
-              </h2>
-              <p className="text-xs text-slate-400 mt-1">
-                {selectedCityIds.length} cities selected. We will automatically create initial stop dates for you.
-              </p>
-            </div>
-
-            <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search city or country..."
-                value={citySearch}
-                onChange={(e) => setCitySearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl glass-input text-xs text-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-h-[450px] overflow-y-auto pr-2">
-            {filteredCities.map((city) => {
-              const isSelected = selectedCityIds.includes(city.id);
-              return (
-                <div
-                  key={city.id}
-                  onClick={() => toggleCitySelection(city.id)}
-                  className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center space-x-3 ${
-                    isSelected
-                      ? 'bg-sky-500/15 border-sky-500 text-white shadow-md shadow-sky-500/10'
-                      : 'glass-card border-slate-800 text-slate-300 hover:border-slate-700'
-                  }`}
-                >
-                  <img
-                    src={city.image || 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=150&q=80'}
-                    alt={city.name}
-                    className="w-12 h-12 rounded-xl object-cover"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold truncate">{city.name}</h4>
-                    <p className="text-xs text-slate-400 truncate">{city.country}</p>
-                  </div>
-                  {isSelected && <CheckCircle className="w-5 h-5 text-sky-400 shrink-0" />}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="pt-4 flex items-center justify-between border-t border-slate-800">
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className="flex items-center space-x-2 px-5 py-2.5 rounded-xl font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep(3)}
-              className="flex items-center space-x-2 px-6 py-3 rounded-xl font-bold text-white bg-sky-500 hover:bg-sky-400 transition-colors"
-            >
-              <span>Next: Cover & Review</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 3: Cover Image & Launch */}
-      {step === 3 && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl space-y-6 border border-slate-800">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400" /> Choose Cover Image & Finalize
-          </h2>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {COVER_IMAGES.map((imgUrl, idx) => (
-              <div
-                key={idx}
-                onClick={() => setSelectedCover(imgUrl)}
-                className={`h-28 rounded-2xl overflow-hidden cursor-pointer border-2 transition-all relative ${
-                  selectedCover === imgUrl ? 'border-sky-500 ring-2 ring-sky-500/40' : 'border-transparent opacity-60 hover:opacity-100'
-                }`}
-              >
-                <img src={imgUrl} alt="Cover" className="w-full h-full object-cover" />
-              </div>
-            ))}
-          </div>
-
-          {/* Summary Preview Box */}
-          <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3 text-sm">
-            <h3 className="text-base font-bold text-white">{name}</h3>
-            <p className="text-xs text-slate-400">{description || 'No description added'}</p>
-            <div className="flex flex-wrap gap-4 text-xs text-slate-300">
-              <span>📅 {startDate} to {endDate}</span>
-              <span>💰 Budget: ${totalBudget} {currency}</span>
-              <span>📍 {selectedCityIds.length} Selected Stops</span>
-              <span>🔒 {visibility}</span>
-            </div>
-          </div>
-
-          <div className="pt-4 flex items-center justify-between border-t border-slate-800">
+          <div className="flex items-center justify-between pt-4">
             <button
               type="button"
               onClick={() => setStep(2)}
-              className="flex items-center space-x-2 px-5 py-2.5 rounded-xl font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700"
+              className="flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
+
             <button
-              type="button"
-              disabled={loading}
-              onClick={handleCreate}
-              className="flex items-center space-x-2 px-8 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-xl shadow-sky-500/30 transition-all duration-200"
+              type="submit"
+              className="flex items-center space-x-2 px-6 py-3 rounded-xl font-extrabold text-xs text-white bg-sky-500 hover:bg-sky-400 shadow-lg shadow-sky-500/20"
             >
-              {loading ? <span>Creating Trip...</span> : (
-                <>
-                  <span>Launch Itinerary Builder</span>
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
+              <span>Next: Review & Cover</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        </form>
+      )}
+
+      {/* Step 4: Cover Image Preview & Final Confirmation */}
+      {step === 4 && (
+        <form onSubmit={handleFinalSubmit} className="glass-panel p-8 rounded-3xl border border-white/10 space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Image className="w-5 h-5 text-amber-400" /> Cover Photo & Final Confirmation
+            </h2>
+            <p className="text-xs text-slate-400">Review your trip details and choose a cover photo background.</p>
+          </div>
+
+          {/* Live Cover Preview Card */}
+          <div className="h-44 rounded-2xl overflow-hidden relative border border-white/10">
+            <img src={coverPhoto} alt="Cover Preview" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-transparent to-transparent"></div>
+            <div className="absolute bottom-4 left-4 right-4">
+              <h3 className="text-xl font-black text-white">{name}</h3>
+              <p className="text-xs text-slate-300">
+                📅 {startDate} to {endDate} • Budget: ₹{totalBudget.toLocaleString()} INR (₹)
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Cover Image URL</label>
+            <input
+              type="url"
+              value={coverPhoto}
+              onChange={(e) => setCoverPhoto(e.target.value)}
+              placeholder="https://images.unsplash.com/..."
+              className="w-full px-4 py-3 rounded-xl glass-input text-xs text-white"
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-4">
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              className="flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center space-x-2 px-8 py-3.5 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-xl shadow-sky-500/25"
+            >
+              <span>{loading ? 'Creating Trip...' : 'Create Trip & Build Itinerary'}</span>
+              <Sparkles className="w-4 h-4" />
+            </button>
+          </div>
+        </form>
       )}
     </div>
   );

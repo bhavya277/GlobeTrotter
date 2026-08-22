@@ -13,6 +13,7 @@ import {
   X,
   Globe,
   Settings,
+  ShieldAlert,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -30,116 +31,129 @@ export const Navbar: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="sticky top-0 z-50 glass-panel border-b border-slate-800/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 glass-panel border-b border-white/10 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to={user ? "/dashboard" : "/"} className="flex items-center space-x-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-transform duration-200">
-              <Globe className="w-6 h-6 text-white animate-spin-slow" />
+          <Link to={user ? "/dashboard" : "/"} className="flex items-center space-x-3 group shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 via-teal-400 to-coral-500 flex items-center justify-center shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-transform duration-200">
+              <Globe className="w-5 h-5 text-white animate-spin-slow" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-white">
+            <span className="text-xl font-black tracking-tight text-white">
               Globe<span className="gradient-text">Trotter</span>
             </span>
           </Link>
 
-          {/* Desktop Nav Links */}
+          {/* Desktop Navigation Links */}
           {user && (
             <nav className="hidden md:flex items-center space-x-1">
               <Link
                 to="/dashboard"
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                   isActive('/dashboard')
-                    ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Compass className="w-4 h-4" />
+                <Compass className="w-4 h-4 text-sky-400" />
                 <span>Dashboard</span>
               </Link>
               <Link
                 to="/cities"
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                   isActive('/cities')
-                    ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <MapPin className="w-4 h-4" />
+                <MapPin className="w-4 h-4 text-turquoise-400" />
                 <span>Explore Cities</span>
               </Link>
               <Link
                 to="/my-trips"
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                   isActive('/my-trips')
-                    ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-4 h-4 text-indigo-400" />
                 <span>My Trips</span>
               </Link>
               <Link
                 to="/saved"
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                   isActive('/saved')
-                    ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Bookmark className="w-4 h-4" />
+                <Bookmark className="w-4 h-4 text-coral-500" />
                 <span>Saved</span>
               </Link>
+              {user.role === 'ADMIN' && (
+                <Link
+                  to="/admin"
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                    isActive('/admin')
+                      ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-sm'
+                      : 'text-purple-300 hover:text-white hover:bg-purple-500/10'
+                  }`}
+                >
+                  <ShieldAlert className="w-4 h-4 text-purple-400" />
+                  <span>Admin</span>
+                </Link>
+              )}
             </nav>
           )}
 
           {/* Right Action Section */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-4 shrink-0">
             {user ? (
               <>
                 <Link
                   to="/create-trip"
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-md shadow-sky-500/25 transition-all duration-200 hover:scale-[1.02]"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-lg shadow-sky-500/20 transition-all duration-200 hover:scale-[1.02]"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>Create Trip</span>
+                  <span>Plan New Trip</span>
                 </Link>
 
                 {/* Profile Dropdown */}
                 <div className="relative">
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="flex items-center space-x-3 p-1.5 rounded-full hover:bg-slate-800/80 transition-colors border border-slate-700/50"
+                    className="flex items-center space-x-2.5 p-1.5 rounded-full hover:bg-white/5 transition-colors border border-white/10"
                   >
                     <img
-                      src={user.profilePhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
+                      src={user.profilePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
                       alt={user.name}
                       className="w-8 h-8 rounded-full object-cover ring-2 ring-sky-500/40"
                     />
-                    <span className="text-sm font-medium text-slate-200 max-w-[100px] truncate">
+                    <span className="text-xs font-bold text-slate-200 max-w-[110px] truncate">
                       {user.name}
                     </span>
                   </button>
 
                   {userDropdownOpen && (
                     <div
-                      className="absolute right-0 mt-2 w-56 glass-panel rounded-xl shadow-2xl py-2 border border-slate-700/80 z-50"
+                      className="absolute right-0 mt-2 w-56 glass-panel rounded-2xl shadow-2xl py-2 border border-white/10 z-50 space-y-1"
                       onClick={() => setUserDropdownOpen(false)}
                     >
-                      <div className="px-4 py-2 border-b border-slate-800">
-                        <p className="text-sm font-semibold text-white">{user.name}</p>
-                        <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                      <div className="px-4 py-2.5 border-b border-white/10">
+                        <p className="text-xs font-bold text-white">{user.name}</p>
+                        <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
                       </div>
                       <Link
                         to="/profile"
-                        className="flex items-center space-x-2 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60"
+                        className="flex items-center space-x-2 px-4 py-2 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5"
                       >
                         <Settings className="w-4 h-4 text-sky-400" />
                         <span>Profile & Settings</span>
                       </Link>
                       <button
                         onClick={handleLogout}
-                        className="w-full text-left flex items-center space-x-2 px-4 py-2.5 text-sm text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+                        className="w-full text-left flex items-center space-x-2 px-4 py-2 text-xs font-bold text-coral-500 hover:bg-rose-500/10 hover:text-rose-400"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>Log Out</span>
@@ -152,13 +166,13 @@ export const Navbar: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <Link
                   to="/login"
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
                 >
                   Log In
                 </Link>
                 <Link
                   to="/signup"
-                  className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-md shadow-sky-500/20 transition-all duration-200"
+                  className="px-4 py-2 rounded-xl text-xs font-extrabold text-white bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-lg shadow-sky-500/20 transition-all duration-200"
                 >
                   Get Started Free
                 </Link>
@@ -170,7 +184,7 @@ export const Navbar: React.FC = () => {
           <div className="flex md:hidden items-center space-x-2">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800"
+              className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/5"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -180,47 +194,47 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden glass-panel border-t border-slate-800 px-4 pt-2 pb-6 space-y-3">
+        <div className="md:hidden glass-panel border-t border-white/10 px-4 pt-2 pb-6 space-y-2">
           {user ? (
             <>
               <Link
                 to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-200 hover:bg-slate-800"
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-white/5"
               >
-                <Compass className="w-5 h-5 text-sky-400" />
+                <Compass className="w-4 h-4 text-sky-400" />
                 <span>Dashboard</span>
               </Link>
               <Link
                 to="/cities"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-200 hover:bg-slate-800"
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-white/5"
               >
-                <MapPin className="w-5 h-5 text-emerald-400" />
+                <MapPin className="w-4 h-4 text-turquoise-400" />
                 <span>Explore Cities</span>
               </Link>
               <Link
                 to="/my-trips"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-200 hover:bg-slate-800"
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-white/5"
               >
-                <Calendar className="w-5 h-5 text-indigo-400" />
+                <Calendar className="w-4 h-4 text-indigo-400" />
                 <span>My Trips</span>
               </Link>
               <Link
                 to="/create-trip"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-sky-600 text-white font-semibold"
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-xl bg-sky-500 text-white font-extrabold text-xs shadow-md shadow-sky-500/20"
               >
-                <PlusCircle className="w-5 h-5" />
-                <span>Create New Trip</span>
+                <PlusCircle className="w-4 h-4" />
+                <span>Plan New Trip</span>
               </Link>
               <Link
                 to="/profile"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-200 hover:bg-slate-800"
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-white/5"
               >
-                <UserIcon className="w-5 h-5 text-amber-400" />
+                <UserIcon className="w-4 h-4 text-coral-500" />
                 <span>Profile Settings</span>
               </Link>
               <button
@@ -228,9 +242,9 @@ export const Navbar: React.FC = () => {
                   setMobileMenuOpen(false);
                   handleLogout();
                 }}
-                className="w-full text-left flex items-center space-x-3 px-3 py-2.5 rounded-lg text-rose-400 hover:bg-rose-500/10"
+                className="w-full text-left flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-bold text-coral-500 hover:bg-rose-500/10"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 h-4" />
                 <span>Log Out</span>
               </button>
             </>
@@ -239,14 +253,14 @@ export const Navbar: React.FC = () => {
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-center px-4 py-2.5 rounded-lg text-slate-200 bg-slate-800"
+                className="block w-full text-center px-4 py-2.5 rounded-xl text-xs font-bold text-slate-200 bg-slate-800"
               >
                 Log In
               </Link>
               <Link
                 to="/signup"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-center px-4 py-2.5 rounded-lg bg-sky-500 text-white font-semibold"
+                className="block w-full text-center px-4 py-2.5 rounded-xl text-xs font-extrabold bg-sky-500 text-white shadow-md shadow-sky-500/20"
               >
                 Sign Up
               </Link>

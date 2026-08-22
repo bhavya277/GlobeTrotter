@@ -20,6 +20,7 @@ import { CitySearch } from './pages/CitySearch';
 import { CityDetail } from './pages/CityDetail';
 import { Profile } from './pages/Profile';
 import { SavedDestinations } from './pages/SavedDestinations';
+import { AdminDashboard } from './pages/AdminDashboard';
 
 // Protected Route Wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -124,6 +125,14 @@ export const AppContent: React.FC = () => {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />

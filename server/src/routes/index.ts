@@ -8,6 +8,7 @@ import tripActivityRoutes from './tripActivity.routes.js';
 import expenseRoutes from './expense.routes.js';
 import savedDestinationRoutes from './savedDestination.routes.js';
 import intelligenceRoutes from './intelligence.routes.js';
+import adminRoutes from './admin.routes.js';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.use('/trips', tripRoutes);
 router.use('/trip-activities', tripActivityRoutes);
 router.use('/expenses', expenseRoutes);
 router.use('/saved-destinations', savedDestinationRoutes);
+router.use('/admin', adminRoutes);
 router.use('/', intelligenceRoutes);
 
 export default router;
