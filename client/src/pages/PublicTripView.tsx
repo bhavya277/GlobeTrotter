@@ -189,7 +189,7 @@ export const PublicTripView: React.FC = () => {
                         <span className="text-[10px] text-slate-400">⏰ {act.startTime || '10:00'} - {act.endTime || '12:00'}</span>
                       </div>
                       <span className="text-xs font-bold text-emerald-400">
-                        ₹{(act.customCost ?? act.activity?.estimatedCost ?? 0).toLocaleString()}
+                        {formatCurrency(act.customCost ?? act.activity?.estimatedCost ?? 0, trip.currency)}
                       </span>
                     </div>
                   ))

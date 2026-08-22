@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Trip, TripActivity, TripStop } from '../types';
+import { formatCurrency } from '../utils/formatters';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -328,7 +329,7 @@ export const TripCalendar: React.FC = () => {
                                     {act.startTime || '10:00'} - {act.endTime || '12:00'}
                                   </span>
                                   <span className="font-bold text-emerald-400">
-                                    ₹{cost.toLocaleString()}
+                                    {formatCurrency(cost, trip.currency)}
                                   </span>
                                 </div>
 
@@ -401,7 +402,7 @@ export const TripCalendar: React.FC = () => {
                     day.activities.map((act) => (
                       <div key={act.id} className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
                         <span className="font-semibold text-white truncate">{act.activity?.name || act.customName}</span>
-                        <span className="text-[10px] text-emerald-400 font-bold shrink-0">₹{act.customCost ?? act.activity?.estimatedCost ?? 0}</span>
+                        <span className="text-[10px] text-emerald-400 font-bold shrink-0">{formatCurrency(act.customCost ?? act.activity?.estimatedCost ?? 0, trip.currency)}</span>
                       </div>
                     ))
                   )}

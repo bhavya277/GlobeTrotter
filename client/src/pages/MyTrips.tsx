@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatCurrency } from '../utils/formatters';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { SkeletonGrid } from '../components/SkeletonLoader';
@@ -243,7 +244,7 @@ export const MyTrips: React.FC = () => {
                       {trip.name}
                     </h3>
                     <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 shrink-0">
-                      ₹{trip.totalBudget?.toLocaleString()} INR (₹)
+                      {formatCurrency(trip.totalBudget || 0, trip.currency)}
                     </span>
                   </div>
 

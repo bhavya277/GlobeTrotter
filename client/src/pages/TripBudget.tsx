@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Trip, Expense } from '../types';
+import { formatCurrency } from '../utils/formatters';
 import {
   BarChart,
   Bar,
@@ -226,10 +227,10 @@ export const TripBudget: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-lg font-black text-rose-300">
-                  ⚠️ ₹{summary.overBudgetAmount.toLocaleString()} over budget
+                  ⚠️ {formatCurrency(summary.overBudgetAmount, summary.currency)} over budget
                 </h3>
                 <p className="text-xs text-slate-300">
-                  Trip Budget: <span className="font-bold text-white">₹{summary.totalBudget.toLocaleString()}</span> • Total Estimated/Actual Cost: <span className="font-bold text-rose-400">₹{summary.totalTripCost.toLocaleString()}</span>
+                  Trip Budget: <span className="font-bold text-white">{formatCurrency(summary.totalBudget, summary.currency)}</span> • Total Cost: <span className="font-bold text-rose-400">{formatCurrency(summary.totalTripCost, summary.currency)}</span>
                 </p>
               </div>
             </div>
@@ -237,7 +238,7 @@ export const TripBudget: React.FC = () => {
 
           <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800 text-xs text-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span>
-              🔍 Excess Budget Origin: Primary overrun source is <span className="font-bold text-amber-400">{summary.topExcessCategory}</span> (₹{categoryTotals[summary.topExcessCategory]?.toLocaleString()}).
+              🔍 Excess Budget Origin: Primary overrun source is <span className="font-bold text-amber-400">{summary.topExcessCategory}</span> ({formatCurrency(categoryTotals[summary.topExcessCategory] || 0, summary.currency)}).
             </span>
             <span className="text-rose-400 font-bold">
               {summary.overBudgetDaysCount} / {summary.totalDays} Days Exceeded Daily Target
@@ -252,39 +253,39 @@ export const TripBudget: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-3 gap-2">
             <div className="flex items-center space-x-2.5">
               <Sparkles className="w-5 h-5 text-amber-400" />
-              <h3 className="text-base font-extrabold text-white">Automatic Pre-Trip Budget Estimation Engine</h3>
+              <h3 className="text-base font-extrabold text-white">Estimated Trip Cost Breakdown</h3>
             </div>
             <span className="text-xs font-extrabold text-sky-400 bg-sky-500/10 px-3 py-1 rounded-xl border border-sky-500/20">
-              Est. Total: ₹{budgetData.estimation.estimatedTotalCost.toLocaleString()} INR
+              Est. Total: {formatCurrency(budgetData.estimation.estimatedTotalCost, summary.currency)}
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-1">
             <div className="p-3.5 rounded-2xl bg-navy-800 border border-white/10 space-y-1">
               <span className="text-[11px] font-bold text-slate-400 uppercase">Estimated Stay</span>
-              <p className="text-lg font-black text-indigo-400">₹{budgetData.estimation.estimatedStayCost.toLocaleString()}</p>
+              <p className="text-lg font-black text-indigo-400">{formatCurrency(budgetData.estimation.estimatedStayCost, summary.currency)}</p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-navy-800 border border-white/10 space-y-1">
               <span className="text-[11px] font-bold text-slate-400 uppercase">Estimated Meals</span>
-              <p className="text-lg font-black text-amber-400">₹{budgetData.estimation.estimatedMealsCost.toLocaleString()}</p>
+              <p className="text-lg font-black text-amber-400">{formatCurrency(budgetData.estimation.estimatedMealsCost, summary.currency)}</p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-navy-800 border border-white/10 space-y-1">
               <span className="text-[11px] font-bold text-slate-400 uppercase">Est. Transport</span>
-              <p className="text-lg font-black text-sky-400">₹{budgetData.estimation.estimatedTransportCost.toLocaleString()}</p>
+              <p className="text-lg font-black text-sky-400">{formatCurrency(budgetData.estimation.estimatedTransportCost, summary.currency)}</p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-navy-800 border border-white/10 space-y-1">
               <span className="text-[11px] font-bold text-slate-400 uppercase">Est. Activities</span>
-              <p className="text-lg font-black text-emerald-400">₹{budgetData.estimation.estimatedActivitiesCost.toLocaleString()}</p>
+              <p className="text-lg font-black text-emerald-400">{formatCurrency(budgetData.estimation.estimatedActivitiesCost, summary.currency)}</p>
             </div>
           </div>
 
           <div className="text-xs text-slate-400 flex items-center justify-between pt-2 border-t border-white/10">
-            <span>Daily Estimate: <span className="font-bold text-white">₹{budgetData.estimation.averageDailyEstimate.toLocaleString()} / day</span></span>
+            <span>Daily Estimate: <span className="font-bold text-white">{formatCurrency(budgetData.estimation.averageDailyEstimate, summary.currency)} / day</span></span>
             {budgetData.estimation.isEstimateOverBudget ? (
-              <span className="text-rose-400 font-extrabold">⚠️ Pre-trip estimate exceeds target budget cap by ₹{budgetData.estimation.estimatedOverrun.toLocaleString()}</span>
+              <span className="text-rose-400 font-extrabold">⚠️ Pre-trip estimate exceeds target budget cap by {formatCurrency(budgetData.estimation.estimatedOverrun, summary.currency)}</span>
             ) : (
               <span className="text-emerald-400 font-extrabold">✅ Pre-trip estimate fits within allocated budget cap</span>
             )}
@@ -299,8 +300,8 @@ export const TripBudget: React.FC = () => {
             <span>Total Trip Budget</span>
             <DollarSign className="w-4 h-4 text-sky-400" />
           </div>
-          <p className="text-2xl font-black text-white">₹{summary.totalBudget.toLocaleString()}</p>
-          <p className="text-[11px] text-slate-500">Allocated limit in INR (₹)</p>
+          <p className="text-2xl font-black text-white">{formatCurrency(summary.totalBudget, summary.currency)}</p>
+          <p className="text-[11px] text-slate-500">Allocated limit</p>
         </div>
 
         <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-1">
@@ -309,7 +310,7 @@ export const TripBudget: React.FC = () => {
             <TrendingUp className="w-4 h-4 text-amber-400" />
           </div>
           <p className={`text-2xl font-black ${summary.isOverBudget ? 'text-rose-400' : 'text-emerald-400'}`}>
-            ₹{summary.totalTripCost.toLocaleString()}
+            {formatCurrency(summary.totalTripCost, summary.currency)}
           </p>
           <p className="text-[11px] text-slate-500">Activities + Logged Expenses</p>
         </div>
@@ -320,7 +321,7 @@ export const TripBudget: React.FC = () => {
             <CheckCircle className={`w-4 h-4 ${summary.isOverBudget ? 'text-rose-400' : 'text-emerald-400'}`} />
           </div>
           <p className={`text-2xl font-black ${summary.isOverBudget ? 'text-rose-400' : 'text-emerald-400'}`}>
-            {summary.isOverBudget ? `+₹${summary.overBudgetAmount.toLocaleString()}` : `₹${summary.remainingBudget.toLocaleString()}`}
+            {summary.isOverBudget ? `+${formatCurrency(summary.overBudgetAmount, summary.currency)}` : formatCurrency(summary.remainingBudget, summary.currency)}
           </p>
           <p className="text-[11px] text-slate-500">{summary.isOverBudget ? 'Exceeds budget cap' : 'Available balance'}</p>
         </div>
@@ -330,8 +331,8 @@ export const TripBudget: React.FC = () => {
             <span>Average Daily Cost</span>
             <Calendar className="w-4 h-4 text-indigo-400" />
           </div>
-          <p className="text-2xl font-black text-white">₹{Math.round(summary.averageDailyCost).toLocaleString()}</p>
-          <p className="text-[11px] text-slate-500">Target: ₹{Math.round(summary.targetDailyBudget).toLocaleString()} / day</p>
+          <p className="text-2xl font-black text-white">{formatCurrency(summary.averageDailyCost, summary.currency)}</p>
+          <p className="text-[11px] text-slate-500">Target: {formatCurrency(summary.targetDailyBudget, summary.currency)} / day</p>
         </div>
       </div>
 
@@ -340,7 +341,7 @@ export const TripBudget: React.FC = () => {
         {/* Category Expense Breakdown (Pie / Donut Chart) */}
         <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <PieIcon className="w-5 h-5 text-sky-400" /> Expense Category Distribution (INR ₹)
+            <PieIcon className="w-5 h-5 text-sky-400" /> Expense Category Distribution
           </h3>
 
           <div className="h-64">
@@ -360,7 +361,7 @@ export const TripBudget: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: number) => [`₹${val.toLocaleString()}`, 'Cost']}
+                  formatter={(val: number) => [formatCurrency(val, summary.currency), 'Cost']}
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#fff' }}
                 />
                 <Legend />
@@ -382,7 +383,7 @@ export const TripBudget: React.FC = () => {
                 <XAxis dataKey="date" stroke="#94a3b8" tick={{ fontSize: 11 }} />
                 <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} />
                 <Tooltip
-                  formatter={(val: number) => [`₹${val.toLocaleString()}`, 'Cost']}
+                  formatter={(val: number) => [formatCurrency(val, summary.currency), 'Cost']}
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#fff' }}
                 />
                 <Legend />
@@ -397,7 +398,7 @@ export const TripBudget: React.FC = () => {
       {/* City Stop Cost Comparison Bar Chart */}
       <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4">
         <h3 className="text-base font-bold text-white flex items-center gap-2">
-          <Building2 className="w-5 h-5 text-emerald-400" /> City Stop Cost Breakdown (INR ₹)
+          <Building2 className="w-5 h-5 text-emerald-400" /> City Stop Cost Breakdown
         </h3>
 
         <div className="h-64">
@@ -407,7 +408,7 @@ export const TripBudget: React.FC = () => {
               <XAxis dataKey="city" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
               <Tooltip
-                formatter={(val: number) => [`₹${val.toLocaleString()}`, 'Cost']}
+                formatter={(val: number) => [formatCurrency(val, summary.currency), 'Cost']}
                 contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#fff' }}
               />
               <Legend />
@@ -440,7 +441,7 @@ export const TripBudget: React.FC = () => {
                   <th className="pb-3 px-2">Date</th>
                   <th className="pb-3 px-2">Category</th>
                   <th className="pb-3 px-2">Description</th>
-                  <th className="pb-3 px-2">Amount (₹)</th>
+                  <th className="pb-3 px-2">Amount</th>
                   <th className="pb-3 px-2 text-right">Action</th>
                 </tr>
               </thead>
@@ -454,7 +455,7 @@ export const TripBudget: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 px-2 font-medium text-white">{e.description}</td>
-                    <td className="py-3 px-2 font-bold text-emerald-400">₹{e.amount.toLocaleString()}</td>
+                    <td className="py-3 px-2 font-bold text-emerald-400">{formatCurrency(e.amount, summary.currency)}</td>
                     <td className="py-3 px-2 text-right">
                       <button
                         onClick={() => handleDeleteExpense(e.id)}

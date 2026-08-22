@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { IntelligencePanel } from '../components/IntelligencePanel';
 import { Trip, TripStop, Activity, TripActivity, City } from '../types';
+import { formatCurrency } from '../utils/formatters';
 import {
   Calendar,
   Clock,
@@ -482,7 +483,7 @@ export const ItineraryBuilder: React.FC = () => {
                             {title}
                           </h4>
                           <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                            {trip.currency === 'INR' ? '₹' : '$'}{cost.toLocaleString()}
+                            {formatCurrency(cost, trip.currency)}
                           </span>
                         </div>
 
@@ -737,7 +738,7 @@ export const ItineraryBuilder: React.FC = () => {
                           <h4 className="text-sm font-bold text-white truncate">{activity.name}</h4>
                           <p className="text-xs text-slate-400 line-clamp-1">{activity.description}</p>
                           <span className="text-[11px] font-semibold text-emerald-400">
-                            Est. {trip.currency === 'INR' ? '₹' : '$'}{activity.estimatedCost} • {activity.durationMinutes} mins
+                            Est. {formatCurrency(activity.estimatedCost, trip.currency)} • {activity.durationMinutes} mins
                           </span>
                         </div>
                         <button
@@ -811,7 +812,7 @@ export const ItineraryBuilder: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                      Estimated Cost ({trip.currency === 'INR' ? '₹' : '$'})
+                      Estimated Cost ({trip.currency || 'INR'})
                     </label>
                     <input
                       type="number"

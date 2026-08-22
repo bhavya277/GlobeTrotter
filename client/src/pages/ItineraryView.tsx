@@ -313,7 +313,7 @@ export const ItineraryView: React.FC = () => {
                     schedule.activities.map((act) => (
                       <div key={act.id} className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
                         <span className="font-semibold text-white truncate">{act.activity?.name || act.customName}</span>
-                        <span className="text-[10px] text-emerald-400 font-bold shrink-0">₹{act.customCost ?? act.activity?.estimatedCost ?? 0}</span>
+                        <span className="text-[10px] text-emerald-400 font-bold shrink-0">{formatCurrency(act.customCost ?? act.activity?.estimatedCost ?? 0, trip.currency)}</span>
                       </div>
                     ))
                   )}
@@ -343,7 +343,7 @@ const ActivityCard: React.FC<{ activity: TripActivity; currency: string }> = ({ 
           </span>
         </div>
         <span className="text-xs font-bold text-emerald-400 shrink-0">
-          ₹{cost.toLocaleString()}
+          {formatCurrency(cost, currency)}
         </span>
       </div>
 

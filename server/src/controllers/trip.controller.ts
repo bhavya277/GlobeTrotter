@@ -109,21 +109,26 @@ export const getTripByShareToken = async (req: Request, res: Response) => {
       where: { shareToken: token },
       include: {
         user: {
-          select: { id: true, name: true, profilePhoto: true },
+          select: {
+            id: true,
+            name: true,
+            profilePhoto: true,
+          },
         },
         stops: {
           include: {
             city: true,
             tripActivities: {
               include: {
-                activity: true,
+                activity: {
+                  include: { city: true },
+                },
               },
               orderBy: { order: 'asc' },
             },
           },
           orderBy: { order: 'asc' },
         },
-        expenses: true,
       },
     });
 
@@ -132,11 +137,28 @@ export const getTripByShareToken = async (req: Request, res: Response) => {
     }
 
     // Security: Ensure private trips cannot be accessed via share token if visibility is explicitly PRIVATE
-    if (trip.visibility === 'PRIVATE' && req.user?.userId !== trip.userId) {
+    const isOwner = Boolean(req.user?.userId && req.user.userId === trip.userId);
+    if (trip.visibility === 'PRIVATE' && !isOwner) {
       return res.status(403).json({ error: 'Access denied. This trip is set to Private.' });
     }
 
-    res.json({ trip, isShared: true });
+    // Public Privacy Isolation (Rule 1): Sanitize private notes for non-owner public access
+    const sanitizedStops = trip.stops.map((stop) => ({
+      ...stop,
+      notes: isOwner ? stop.notes : null,
+      tripActivities: stop.tripActivities.map((act) => ({
+        ...act,
+        notes: isOwner ? act.notes : null,
+      })),
+    }));
+
+    const sanitizedTrip = {
+      ...trip,
+      stops: sanitizedStops,
+      expenses: [], // NEVER expose private expense records on public share URLs
+    };
+
+    res.json({ trip: sanitizedTrip, isShared: true });
   } catch (error) {
     console.error('Get shared trip error:', error);
     res.status(500).json({ error: 'Failed to fetch shared trip' });

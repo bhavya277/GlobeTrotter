@@ -26,19 +26,22 @@ export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [recommendedCities, setRecommendedCities] = useState<City[]>([]);
+  const [savedCount, setSavedCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const [tripsRes, citiesRes] = await Promise.all([
+        const [tripsRes, citiesRes, savedRes] = await Promise.all([
           api.trips.getMyTrips(),
           api.cities.getAll(),
+          api.savedDestinations.getAll().catch(() => ({ savedDestinations: [] })),
         ]);
         setTrips(tripsRes.trips);
         setRecommendedCities(citiesRes.cities.slice(0, 3));
+        setSavedCount(savedRes.savedDestinations?.length || 0);
       } catch (err) {
-        console.error('Failed to load dashboard telemetry:', err);
+        console.error('Failed to load dashboard data:', err);
       } finally {
         setLoading(false);
       }
@@ -122,14 +125,14 @@ export const Dashboard: React.FC = () => {
           <span className="text-slate-400 text-xs font-semibold flex items-center justify-between">
             Total Logged Expenses <TrendingUp className="w-4 h-4 text-coral-500" />
           </span>
-          <p className="text-2xl font-black text-coral-400">₹{totalBudgetSpent.toLocaleString()} INR</p>
+          <p className="text-2xl font-black text-coral-400">{formatCurrency(totalBudgetSpent, user?.defaultCurrency || 'INR')}</p>
         </div>
 
         <div className="glass-panel p-5 rounded-2xl border border-white/10 space-y-1">
           <span className="text-slate-400 text-xs font-semibold flex items-center justify-between">
             Saved Destinations <Bookmark className="w-4 h-4 text-amber-400" />
           </span>
-          <p className="text-2xl font-black text-amber-400">3 Saved</p>
+          <p className="text-2xl font-black text-amber-400">{savedCount} Saved</p>
         </div>
       </div>
 
@@ -139,7 +142,7 @@ export const Dashboard: React.FC = () => {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/10 pb-4">
             <div>
               <span className="px-3 py-1 rounded-full text-[10px] font-extrabold bg-sky-500/10 text-sky-400 border border-sky-500/20 uppercase tracking-wider">
-                Next Upcoming Expedition
+                Next Upcoming Trip
               </span>
               <h2 className="text-2xl font-black text-white mt-1">{nextUpcomingTrip.name}</h2>
               <p className="text-xs text-slate-400">
@@ -149,7 +152,7 @@ export const Dashboard: React.FC = () => {
 
             <div className="flex items-center space-x-3 shrink-0">
               <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/10 px-3.5 py-1.5 rounded-xl border border-emerald-500/20">
-                Budget: ₹{nextUpcomingTrip.totalBudget?.toLocaleString()} INR (₹)
+                Budget: {formatCurrency(nextUpcomingTrip.totalBudget || 0, nextUpcomingTrip.currency)}
               </span>
 
               <Link
