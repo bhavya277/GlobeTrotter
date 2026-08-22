@@ -215,6 +215,14 @@ export const api = {
       });
       return handleResponse<{ tripActivity: TripActivity }>(res);
     },
+    reorder: async (orderedActivityIds: string[]) => {
+      const res = await fetch(`${API_BASE}/trip-activities/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ orderedActivityIds }),
+      });
+      return handleResponse<{ message: string }>(res);
+    },
     delete: async (id: string) => {
       const res = await fetch(`${API_BASE}/trip-activities/${id}`, {
         method: 'DELETE',

@@ -26,6 +26,10 @@ const updateTripActivitySchema = z.object({
   category: z.string().optional(),
 });
 
+const reorderActivitiesSchema = z.object({
+  orderedActivityIds: z.array(z.string()).min(1, 'Ordered activity IDs required'),
+});
+
 export const addTripActivity = async (req: Request, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
@@ -44,7 +48,7 @@ export const addTripActivity = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Forbidden. You do not own this trip.' });
     }
 
-    // Cross-City Activity Mismatch Protection (Phase 5 Rule)
+    // Cross-City Activity Mismatch Protection
     if (validated.activityId) {
       const catalogActivity = await prisma.activity.findUnique({
         where: { id: validated.activityId },
@@ -66,7 +70,7 @@ export const addTripActivity = async (req: Request, res: Response) => {
     const stopStart = new Date(stop.startDate);
     const stopEnd = new Date(stop.endDate);
 
-    // Date Validation: scheduledDate should fall within trip stop dates
+    // Date Validation
     if (scheduledDateObj < stopStart || scheduledDateObj > stopEnd) {
       return res.status(400).json({
         error: `Activity Date Mismatch: Scheduled date (${scheduledDateObj.toLocaleDateString()}) must be within the stop's dates (${stopStart.toLocaleDateString()} - ${stopEnd.toLocaleDateString()}).`,
@@ -124,6 +128,18 @@ export const updateTripActivity = async (req: Request, res: Response) => {
 
     const validated = updateTripActivitySchema.parse(req.body);
 
+    if (validated.scheduledDate) {
+      const scheduledDateObj = new Date(validated.scheduledDate);
+      const stopStart = new Date(existing.tripStop.startDate);
+      const stopEnd = new Date(existing.tripStop.endDate);
+
+      if (scheduledDateObj < stopStart || scheduledDateObj > stopEnd) {
+        return res.status(400).json({
+          error: `Activity Date Mismatch: Scheduled date (${scheduledDateObj.toLocaleDateString()}) must be within the stop's dates (${stopStart.toLocaleDateString()} - ${stopEnd.toLocaleDateString()}).`,
+        });
+      }
+    }
+
     const updated = await prisma.tripActivity.update({
       where: { id },
       data: {
@@ -154,6 +170,31 @@ export const updateTripActivity = async (req: Request, res: Response) => {
   }
 };
 
+export const reorderTripActivities = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
+
+    const validated = reorderActivitiesSchema.parse(req.body);
+
+    await prisma.$transaction(
+      validated.orderedActivityIds.map((id, index) =>
+        prisma.tripActivity.update({
+          where: { id },
+          data: { order: index + 1 },
+        })
+      )
+    );
+
+    res.json({ message: 'Activities reordered successfully' });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Reorder activities error:', error);
+    res.status(500).json({ error: 'Failed to reorder activities' });
+  }
+};
+
 export const deleteTripActivity = async (req: Request, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
@@ -169,7 +210,7 @@ export const deleteTripActivity = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Forbidden. You do not own this trip.' });
     }
 
-    await prisma.tripActivity.delete({ where: { id } });
+    await prisma.tripActivity.delete({ where: { id} });
 
     res.json({ message: 'Activity removed from itinerary stop' });
   } catch (error) {
