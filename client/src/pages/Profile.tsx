@@ -194,10 +194,10 @@ export const Profile: React.FC = () => {
               <div className="relative">
                 <Camera className="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
                 <input
-                  type="url"
+                  type="text"
                   value={profilePhoto}
                   onChange={(e) => setProfilePhoto(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
+                  placeholder="Image path or URL (e.g. /uploads/images/... or https://...)"
                   className="w-full pl-10 pr-4 py-2 rounded-xl glass-input text-xs text-white"
                 />
               </div>
