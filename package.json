@@ -1,0 +1,17 @@
+{
+  "name": "globetrotter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GlobeTrotter — Empowering Personalized Travel Planning",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix client && npm install --prefix server",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix server && npm run build --prefix client",
+    "type-check": "npm run type-check --prefix client && npm run type-check --prefix server",
+    "db:setup": "npm run db:setup --prefix server",
+    "db:seed": "npm run db:seed --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
