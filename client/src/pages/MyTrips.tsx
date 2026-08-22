@@ -66,8 +66,10 @@ export const MyTrips: React.FC = () => {
     setEditTarget(trip);
     setEditName(trip.name);
     setEditDescription(trip.description || '');
-    setEditStartDate(new Date(trip.startDate).toISOString().split('T')[0]);
-    setEditEndDate(new Date(trip.endDate).toISOString().split('T')[0]);
+    const startStr = typeof trip.startDate === 'string' ? trip.startDate.split('T')[0] : new Date(trip.startDate).toISOString().split('T')[0];
+    const endStr = typeof trip.endDate === 'string' ? trip.endDate.split('T')[0] : new Date(trip.endDate).toISOString().split('T')[0];
+    setEditStartDate(startStr);
+    setEditEndDate(endStr);
     setEditBudget(trip.totalBudget || 0);
     setEditCurrency(trip.currency || 'USD');
     setEditVisibility(trip.visibility);
