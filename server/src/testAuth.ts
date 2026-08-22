@@ -1,4 +1,5 @@
 import { prisma } from './db.js';
+import crypto from 'crypto';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -158,23 +159,36 @@ async function runAuthTestSuite() {
 
   // 11. Forgot-Password & Reset-Password Architecture Test
   await assertTest('11. Forgot-Password & Reset-Password Flow', async () => {
-    // Request reset token
+    // Request reset token (Secure API returns generic message without token leakage)
     const forgotRes = await fetch(`${API_BASE}/auth/forgot-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: emailA }),
     });
-    const forgotData: any = await forgotRes.json();
-    const resetToken = forgotData.resetToken;
 
-    if (!resetToken) return false;
+    if (forgotRes.status !== 200) return false;
 
-    // Reset password
+    // Secure Test Setup: Create a test raw token and store its SHA-256 hash in DB
+    const rawResetToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawResetToken).digest('hex');
+    const userA = await prisma.user.findUnique({ where: { email: emailA } });
+    if (!userA) return false;
+
+    await prisma.passwordResetToken.deleteMany({ where: { userId: userA.id } });
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: userA.id,
+        token: tokenHash,
+        expiresAt: new Date(Date.now() + 3600000),
+      },
+    });
+
+    // Reset password with raw token
     const newPass = 'brandNewPassword99';
     const resetRes = await fetch(`${API_BASE}/auth/reset-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: resetToken, newPassword: newPass }),
+      body: JSON.stringify({ token: rawResetToken, newPassword: newPass }),
     });
 
     if (resetRes.status !== 200) return false;

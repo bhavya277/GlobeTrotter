@@ -34,7 +34,7 @@ async function runSecurityNegativeHardeningAudit() {
     body: JSON.stringify({ name: 'Security User 1', email: user1Email, password: 'Password123!' }),
   });
   const data1: any = await reg1.json();
-  const token1 = data1.token;
+  const token1 = data1.token || data1.accessToken;
 
   const reg2 = await fetch(`${API_BASE}/auth/register`, {
     method: 'POST',
@@ -42,7 +42,7 @@ async function runSecurityNegativeHardeningAudit() {
     body: JSON.stringify({ name: 'Security User 2', email: user2Email, password: 'Password123!' }),
   });
   const data2: any = await reg2.json();
-  const token2 = data2.token;
+  const token2 = data2.token || data2.accessToken;
 
   // Create User 1 Private Trip
   const trip1Res = await fetch(`${API_BASE}/trips`, {
@@ -278,6 +278,7 @@ async function runSecurityNegativeHardeningAudit() {
     // Generate valid reset token for User 1
     const rawToken = `valid_reused_token_${Date.now()}`;
     const tokenHash = (await import('crypto')).createHash('sha256').update(rawToken).digest('hex');
+    await prisma.passwordResetToken.deleteMany({ where: { userId: data1.user.id } });
     await prisma.passwordResetToken.create({
       data: {
         userId: data1.user.id,
