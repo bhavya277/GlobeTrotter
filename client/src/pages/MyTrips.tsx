@@ -184,7 +184,7 @@ export const MyTrips: React.FC = () => {
                   : 'text-slate-400 hover:text-white bg-slate-800/60'
               }`}
             >
-              {tab === 'ALL' ? 'All Trips' : tab === 'UPCOMING' ? 'Upcoming' : 'Past Expeditions'}
+              {tab === 'ALL' ? 'All Trips' : tab === 'UPCOMING' ? 'Upcoming' : 'Past Trips'}
             </button>
           ))}
         </div>

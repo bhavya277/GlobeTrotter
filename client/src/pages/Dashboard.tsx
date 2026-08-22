@@ -196,9 +196,9 @@ export const Dashboard: React.FC = () => {
       {/* 4. Recent Trips Library Grid */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Layers className="w-5 h-5 text-sky-400" /> Recent Travel Expeditions
-          </h2>
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <Layers className="w-5 h-5 text-sky-400" /> Recent Trips
+          </h3>
           <Link to="/my-trips" className="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
             View All Trips <ChevronRight className="w-4 h-4" />
           </Link>

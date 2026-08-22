@@ -21,10 +21,10 @@ export const Home: React.FC = () => {
     <div className="space-y-20 py-8 overflow-hidden">
       {/* Hero Section */}
       <section className="relative px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center space-y-8 pt-8">
-        <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full glass-panel border border-sky-500/30 text-xs font-semibold text-sky-300 mb-2 animate-bounce-slow">
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          <span>Hackathon 2026 Edition — Empowering Personalized Travel</span>
-        </div>
+        <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20 inline-flex items-center space-x-2">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Next-Generation Multi-City Travel Workspace</span>
+        </span>
 
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight max-w-5xl mx-auto leading-tight">
           Plan, Organize & Visualize Your Dream <span className="gradient-text">Global Journeys</span>

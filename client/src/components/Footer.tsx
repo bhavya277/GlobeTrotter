@@ -15,8 +15,8 @@ export const Footer: React.FC = () => {
             </span>
           </div>
 
-          <p className="text-sm text-slate-400 text-center flex items-center gap-1.5">
-            Empowering Personalized Travel Planning • Built with <Heart className="w-4 h-4 text-rose-500 fill-rose-500" /> for Hackathon 2026
+          <p className="text-xs text-slate-400 flex items-center justify-center gap-1.5">
+            Empowering Personalized Travel Planning • Built with <Heart className="w-4 h-4 text-rose-500 fill-rose-500" /> for Explorers Worldwide
           </p>
 
           <div className="flex items-center space-x-4 text-xs text-slate-400">
