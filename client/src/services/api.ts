@@ -238,7 +238,7 @@ export const api = {
       const res = await fetch(`${API_BASE}/expenses/trip/${tripId}`, {
         headers: { ...getAuthHeaders() },
       });
-      return handleResponse<{ expenses: Expense[]; summary: ExpenseSummary }>(res);
+      return handleResponse<any>(res);
     },
     create: async (data: {
       tripId: string;

@@ -5,62 +5,193 @@ import { prisma } from '../db.js';
 const createExpenseSchema = z.object({
   tripId: z.string().min(1, 'Trip ID is required'),
   tripStopId: z.string().optional(),
-  category: z.enum(['Accommodation', 'Transport', 'Food', 'Activities', 'Shopping', 'Miscellaneous']),
+  category: z.enum(['Transport', 'Stay', 'Activities', 'Meals', 'Shopping', 'Other']).default('Other'),
   amount: z.number().positive('Amount must be positive'),
-  currency: z.string().default('USD'),
+  currency: z.string().default('INR'),
   description: z.string().min(1, 'Description is required'),
-  date: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date'),
+  date: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date format'),
 });
 
-export const getExpensesByTrip = async (req: Request, res: Response) => {
+export const getTripExpenseSummary = async (req: Request, res: Response) => {
   try {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
     const { tripId } = req.params;
-    const currentUserId = req.user?.userId;
 
-    const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-    if (!trip) return res.status(404).json({ error: 'Trip not found' });
-
-    if (trip.userId !== currentUserId && trip.visibility !== 'PUBLIC') {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    const expenses = await prisma.expense.findMany({
-      where: { tripId },
-      include: { tripStop: { include: { city: true } } },
-      orderBy: { date: 'desc' },
-    });
-
-    const totalExpense = expenses.reduce((acc, curr) => acc + curr.amount, 0);
-
-    const categoryBreakdown = expenses.reduce((acc: any, curr) => {
-      acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
-      return acc;
-    }, {});
-
-    res.json({
-      expenses,
-      summary: {
-        totalBudget: trip.totalBudget,
-        totalExpense,
-        remainingBudget: trip.totalBudget - totalExpense,
-        categoryBreakdown,
+    const trip = await prisma.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        stops: {
+          include: {
+            city: true,
+            tripActivities: {
+              include: { activity: true },
+            },
+          },
+        },
+        expenses: {
+          orderBy: { date: 'desc' },
+        },
       },
     });
+
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    if (trip.userId !== req.user.userId && trip.visibility !== 'PUBLIC') {
+      return res.status(403).json({ error: 'Forbidden. Access denied to trip expenses.' });
+    }
+
+    // 1. Calculate Logged Expenses
+    const loggedExpenses = trip.expenses;
+
+    // 2. Calculate Scheduled Activity Costs from TripActivities
+    let activityTotalCost = 0;
+    const activityCategoryBreakdown: Record<string, number> = {};
+
+    trip.stops.forEach((stop) => {
+      stop.tripActivities.forEach((act) => {
+        const cost = act.customCost ?? act.activity?.estimatedCost ?? 0;
+        activityTotalCost += cost;
+        const cat = act.category || act.activity?.category || 'Activities';
+        activityCategoryBreakdown[cat] = (activityCategoryBreakdown[cat] || 0) + cost;
+      });
+    });
+
+    // 3. Category Breakdown (Combining Logged Expenses + Activity Costs)
+    const categoryTotals: Record<string, number> = {
+      Transport: 0,
+      Stay: 0,
+      Activities: activityTotalCost,
+      Meals: 0,
+      Shopping: 0,
+      Other: 0,
+    };
+
+    loggedExpenses.forEach((e) => {
+      const catKey = e.category === 'Accommodation' ? 'Stay' : e.category;
+      categoryTotals[catKey] = (categoryTotals[catKey] || 0) + e.amount;
+    });
+
+    const totalLoggedCost = loggedExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalTripCost = totalLoggedCost + activityTotalCost;
+    const totalBudget = trip.totalBudget || 0;
+    const remainingBudget = Math.max(0, totalBudget - totalTripCost);
+    const isOverBudget = totalTripCost > totalBudget && totalBudget > 0;
+    const overBudgetAmount = isOverBudget ? totalTripCost - totalBudget : 0;
+
+    // Identify primary category driving budget excess
+    let topExcessCategory = 'Activities';
+    let maxCategoryCost = 0;
+    Object.entries(categoryTotals).forEach(([cat, amt]) => {
+      if (amt > maxCategoryCost) {
+        maxCategoryCost = amt;
+        topExcessCategory = cat;
+      }
+    });
+
+    // 4. Daily Cost Breakdown & Over-Budget Days Calculation
+    const startDate = new Date(trip.startDate);
+    const endDate = new Date(trip.endDate);
+    const totalDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const targetDailyBudget = totalBudget > 0 ? totalBudget / totalDays : 0;
+    const averageDailyCost = totalTripCost / totalDays;
+
+    const dailyBreakdown: Array<{
+      dateStr: string;
+      cost: number;
+      isOverBudget: boolean;
+      targetBudget: number;
+    }> = [];
+
+    let overBudgetDaysCount = 0;
+
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+
+      // Sum expenses on date
+      const dayLogged = loggedExpenses
+        .filter((e) => new Date(e.date).toISOString().split('T')[0] === dateStr)
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      // Sum activities on date
+      let dayActivitiesCost = 0;
+      trip.stops.forEach((stop) => {
+        stop.tripActivities.forEach((act) => {
+          if (new Date(act.scheduledDate).toISOString().split('T')[0] === dateStr) {
+            dayActivitiesCost += act.customCost ?? act.activity?.estimatedCost ?? 0;
+          }
+        });
+      });
+
+      const dayTotalCost = dayLogged + dayActivitiesCost;
+      const isDayOver = targetDailyBudget > 0 && dayTotalCost > targetDailyBudget;
+      if (isDayOver) overBudgetDaysCount++;
+
+      dailyBreakdown.push({
+        dateStr,
+        cost: dayTotalCost,
+        isOverBudget: isDayOver,
+        targetBudget: targetDailyBudget,
+      });
+    }
+
+    // 5. City Stop Cost Breakdown
+    const cityBreakdown = trip.stops.map((stop) => {
+      const stopActivitiesCost = stop.tripActivities.reduce(
+        (sum, act) => sum + (act.customCost ?? act.activity?.estimatedCost ?? 0),
+        0
+      );
+      const stopExpensesCost = loggedExpenses
+        .filter((e) => e.tripStopId === stop.id)
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      return {
+        stopId: stop.id,
+        cityName: stop.city.name,
+        activitiesCost: stopActivitiesCost,
+        loggedExpensesCost: stopExpensesCost,
+        totalCost: stopActivitiesCost + stopExpensesCost,
+      };
+    });
+
+    res.json({
+      summary: {
+        currency: trip.currency || 'INR',
+        totalBudget,
+        totalTripCost,
+        totalLoggedCost,
+        activityTotalCost,
+        remainingBudget,
+        isOverBudget,
+        overBudgetAmount,
+        topExcessCategory,
+        totalDays,
+        averageDailyCost,
+        targetDailyBudget,
+        overBudgetDaysCount,
+      },
+      categoryTotals,
+      dailyBreakdown,
+      cityBreakdown,
+      expenses: loggedExpenses,
+    });
   } catch (error) {
-    console.error('Get expenses error:', error);
-    res.status(500).json({ error: 'Failed to fetch expenses' });
+    console.error('Get trip expense summary error:', error);
+    res.status(500).json({ error: 'Failed to compute trip budget calculations' });
   }
 };
 
 export const createExpense = async (req: Request, res: Response) => {
   try {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
 
     const validated = createExpenseSchema.parse(req.body);
 
     const trip = await prisma.trip.findUnique({ where: { id: validated.tripId } });
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
-    if (trip.userId !== req.user.userId) return res.status(403).json({ error: 'Forbidden' });
+    if (trip.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Forbidden. You do not own this trip.' });
+    }
 
     const expense = await prisma.expense.create({
       data: {
@@ -69,11 +200,8 @@ export const createExpense = async (req: Request, res: Response) => {
         category: validated.category,
         amount: validated.amount,
         currency: validated.currency,
-        description: validated.description,
+        description: validated.description.trim(),
         date: new Date(validated.date),
-      },
-      include: {
-        tripStop: { include: { city: true } },
       },
     });
 
@@ -83,13 +211,13 @@ export const createExpense = async (req: Request, res: Response) => {
       return res.status(400).json({ error: error.errors[0].message });
     }
     console.error('Create expense error:', error);
-    res.status(500).json({ error: 'Failed to create expense' });
+    res.status(500).json({ error: 'Failed to log expense' });
   }
 };
 
 export const deleteExpense = async (req: Request, res: Response) => {
   try {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized access' });
     const { id } = req.params;
 
     const existing = await prisma.expense.findUnique({
@@ -97,8 +225,10 @@ export const deleteExpense = async (req: Request, res: Response) => {
       include: { trip: true },
     });
 
-    if (!existing) return res.status(404).json({ error: 'Expense not found' });
-    if (existing.trip.userId !== req.user.userId) return res.status(403).json({ error: 'Forbidden' });
+    if (!existing) return res.status(404).json({ error: 'Expense log not found' });
+    if (existing.trip.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Forbidden. You do not own this trip.' });
+    }
 
     await prisma.expense.delete({ where: { id } });
 
